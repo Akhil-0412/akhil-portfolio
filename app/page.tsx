@@ -1,6 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import ResumeChooser from "../components/ResumeChooser";
+
+
 
 export default function Home() {
   return (
@@ -320,6 +323,10 @@ export default function Home() {
             </a>
 
           </div>
+          <div className="mt-16">
+            <ResumeChooser />
+          </div>
+
         </motion.div>
       </section>
 
