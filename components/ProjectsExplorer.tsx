@@ -13,64 +13,46 @@ interface Project {
     tech: string[];
     link?: string;
     github?: string;
+    image?: string;
 }
 
 const projects: Project[] = [
     {
-        id: "rag",
-        title: "Authoritative RAG Engine",
-        category: "Generative AI",
-        description: "Production-grade RAG with semantic caching & strict verification.",
+        id: "agentic-compliance",
+        title: "Agentic Compliance Agent",
+        category: "Enterprise AI",
+        description: "Multi-agent system for automated regulatory compliance and auditing.",
         longDescription:
-            "Engineered a production-grade Retrieval-Augmented Generation (RAG) system using Redis for vector search and L1/L2 semantic caching, reducing query latency by 98% (from ~2500ms to ~30ms). Implemented a strict verification pipeline that validates LLM claims against curated datasets (CDC/SEC), automatically enforcing safety disclaimers for medical and financial queries.",
-        tech: ["Python", "Streamlit", "Redis", "OpenRouter API"],
-        github: "https://github.com/Akhil-0412/RAG-Semantic-Cacheing",
+            "Architected a sophisticated multi-agent system designed to automate complex regulatory compliance tasks. The agent evaluates documents against strict financial and legal regulations, ensuring adherence to compliance rules with full audit trails and minimizing risk.",
+        tech: ["Python", "FastAPI", "React", "Next.js", "LangChain"],
+        link: "https://agentic-compliance.vercel.app",
+        github: "https://github.com/Akhil-0412/Agentic_Compliance_Agent_v2",
+        image: "/projects/agentic.png",
     },
     {
-        id: "tumor",
-        title: "Brain Tumor Classification",
-        category: "Healthcare AI",
-        description: "99% accuracy MRI classification with ResNet-50 & ViT.",
+        id: "smart-saas",
+        title: "Smart SaaS Dashboard",
+        category: "Full Stack Web",
+        description: "Modern, AI-driven SaaS dashboard with advanced analytics.",
         longDescription:
-            "Achieved 99% test accuracy in classifying MRI scans by fine-tuning a ResNet-50 architecture with transfer learning. Implemented and benchmarked a Vision Transformer (ViT) (patch size 16x16) which reached 98% accuracy, identifying that patch-based attention effectively models global context.",
-        tech: ["Python", "PyTorch", "ResNet-50", "Vision Transformers"],
+            "Developed a comprehensive Next.js-based SaaS dashboard featuring real-time analytics, user management, and AI-driven diagnostics. Integrated advanced data visualization, secure authentication, and scalable backend services to handle complex business operations seamlessly.",
+        tech: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
+        link: "https://smart-saas-frontend.vercel.app",
+        github: "https://github.com/Akhil-0412/Smart_Saas_Dashboard",
+        image: "/projects/saas.png",
     },
     {
-        id: "weaver",
-        title: "Autonomous Robotic Weaver",
-        category: "Robotics & IoT",
-        description: "Spider-inspired robot with CV-based anchor detection.",
+        id: "pulse-project",
+        title: "PULSE (PPG Signal AI)",
+        category: "Healthcare AI & DSP",
+        description: "Advanced signal processing on Photoplethysmography data.",
         longDescription:
-            "Built a multi-axis robot capable of autonomously weaving web structures by integrating computer vision (HSV color space) to detect anchor points with 92% accuracy. Developed a distributed control architecture where a Raspberry Pi Zero 2W handles vision processing and transmits trajectory data via MQTT/TCP to a Pico 2W motion controller.",
-        tech: ["Raspberry Pi", "OpenCV", "MQTT", "Python"],
-    },
-    {
-        id: "music",
-        title: "Music Genre Classification",
-        category: "Audio AI",
-        description: "Deep Learning on spectrograms using CNNs & GANs.",
-        longDescription:
-            "Architected a CNN with Batch Normalization and RMSProp optimizer that achieved 75.25% accuracy on the GTZAN dataset, outperforming standard Fully Connected baselines by over 20%. Explored data augmentation using Generative Adversarial Networks (GANs) to synthesize Mel-spectrograms, improving training stability.",
-        tech: ["PyTorch", "Librosa", "CNNs", "GANs"],
-    },
-    {
-        id: "maritime",
-        title: "Maritime Bidding Agent",
-        category: "Game Theory",
-        description: "Intelligent agent for reverse Vickrey auctions.",
-        longDescription:
-            "Designed a bidding agent for a reverse Vickrey auction simulation, implementing a 'True Valuation' strategy that secured profitability against competing agents. Optimized vessel routing using an exhaustive search algorithm with heuristics, reducing computational complexity significantly by sorting fleet capabilities.",
-        tech: ["Python", "Graph Theory", "Vickrey Auctions"],
-    },
-    {
-        id: "nlp",
-        title: "Theme Discovery Clustering",
-        category: "Data Science",
-        description: "Unsupervised clustering on text8 corpus with LSA.",
-        longDescription:
-            "Processed the text8 corpus using NLTK and applied Truncated SVD (LSA) to reduce dimensionality to 1000 features. Determined optimal clusters (k=4) using Elbow Method and Calinski-Harabasz scores to extract thematic insights.",
-        tech: ["Python", "NLTK", "Scikit-learn", "K-Means"],
-    },
+            "Implemented an advanced deep learning pipeline to analyze Photoplethysmography (PPG) signals. Processed raw physiological data, applied noise reduction algorithms, and developed predictive models for continuous and accurate health monitoring indicators.",
+        tech: ["Python", "PyTorch", "Signal Processing"],
+        link: "https://pulse-8suw3ls0b-akhil-0412s-projects.vercel.app/",
+        github: "https://github.com/Akhil-0412/PULSE",
+        image: "/projects/pulse.png",
+    }
 ];
 
 export default function ProjectsExplorer() {
@@ -152,11 +134,31 @@ function SpotlightCard({ project, onClick }: { project: Project; onClick: () => 
 
             {/* Content */}
             <div className="relative z-10 flex flex-col h-full">
+                {project.image && (
+                    <div className="mb-4 overflow-hidden rounded-xl border border-white/5 group-hover:border-white/20 transition-colors">
+                        <img
+                            src={project.image}
+                            alt={project.title}
+                            className="w-full h-40 object-cover transform transition-transform duration-500 group-hover:scale-110"
+                        />
+                    </div>
+                )}
                 <div className="flex justify-between items-start mb-4">
                     <span className="text-xs font-semibold tracking-wider text-cyan-400 uppercase">
                         {project.category}
                     </span>
-                    {project.github && <Github className="w-5 h-5 text-gray-500 hover:text-white transition-colors" />}
+                    <div className="flex gap-2">
+                        {project.link && (
+                            <a href={project.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-cyan-400 transition-colors">
+                                <ExternalLink className="w-5 h-5" />
+                            </a>
+                        )}
+                        {project.github && (
+                            <a href={project.github} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-white transition-colors">
+                                <Github className="w-5 h-5" />
+                            </a>
+                        )}
+                    </div>
                 </div>
 
                 <h4 className="text-xl font-bold mb-3 group-hover:text-cyan-200 transition-colors">
@@ -205,13 +207,23 @@ function Modal({ project, onClose }: { project: Project; onClose: () => void }) 
                     <X className="w-5 h-5 text-gray-400" />
                 </button>
 
-                <span className="text-sm font-semibold text-cyan-400 uppercase tracking-widest">
+                <span className="text-sm font-semibold text-cyan-400 uppercase tracking-widest block mb-2 mt-4">
                     {project.category}
                 </span>
 
-                <h3 className="text-3xl md:text-4xl font-bold mt-2 mb-6">
+                <h3 className="text-3xl md:text-4xl font-bold mb-6">
                     {project.title}
                 </h3>
+
+                {project.image && (
+                    <div className="mb-8 overflow-hidden rounded-2xl border border-white/10">
+                        <img
+                            src={project.image}
+                            alt={project.title}
+                            className="w-full max-h-80 object-cover"
+                        />
+                    </div>
+                )}
 
                 <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
                     <p>{project.longDescription}</p>
@@ -228,8 +240,19 @@ function Modal({ project, onClose }: { project: Project; onClose: () => void }) 
                     </div>
                 </div>
 
-                {project.github && (
-                    <div className="mt-8 flex gap-4">
+                <div className="mt-8 flex flex-wrap gap-4">
+                    {project.link && (
+                        <a
+                            href={project.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-6 py-3 rounded-full bg-cyan-500 text-black font-semibold hover:bg-cyan-400 transition-colors"
+                        >
+                            <ExternalLink className="w-5 h-5" />
+                            View Live App
+                        </a>
+                    )}
+                    {project.github && (
                         <a
                             href={project.github}
                             target="_blank"
@@ -239,8 +262,8 @@ function Modal({ project, onClose }: { project: Project; onClose: () => void }) 
                             <Github className="w-5 h-5" />
                             View Code
                         </a>
-                    </div>
-                )}
+                    )}
+                </div>
             </motion.div>
         </motion.div>
     );
