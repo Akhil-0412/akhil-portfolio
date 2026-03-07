@@ -18,6 +18,18 @@ interface Project {
 
 const projects: Project[] = [
     {
+        id: "f1-podium-predictor",
+        title: "FormulAI F1",
+        category: "Machine Learning",
+        description: "Multi-stage ML pipeline for predicting Formula 1 podium finishers using historical and real-time data.",
+        longDescription:
+            "Engineered an advanced prediction system leveraging XGBoost, LightGBM, and Bayesian Updating to forecast F1 race outcomes. Integrates multiple data sources and Monte Carlo simulations for realtime constraint enforcement.",
+        tech: ["Python", "XGBoost", "FastAPI", "React", "Next.js"],
+        link: "https://formula-ai-two.vercel.app/",
+        github: "https://github.com/Akhil-0412/FormulAI",
+        image: "/projects/formulai.png",
+    },
+    {
         id: "compliance-analyst",
         title: "Compliance Analyst Agent",
         category: "Enterprise AI",
@@ -31,7 +43,7 @@ const projects: Project[] = [
     },
     {
         id: "smart-saas",
-        title: "Smart SaaS Dashboard",
+        title: "Autognosis",
         category: "Full Stack Web",
         description: "Modern, AI-driven SaaS dashboard with advanced analytics.",
         longDescription:
@@ -42,20 +54,8 @@ const projects: Project[] = [
         image: "/projects/saas.png",
     },
     {
-        id: "f1-podium-predictor",
-        title: "FormulAI",
-        category: "Machine Learning",
-        description: "Multi-stage ML pipeline for predicting Formula 1 podium finishers using historical and real-time data.",
-        longDescription:
-            "Engineered an advanced prediction system leveraging XGBoost, LightGBM, and Bayesian Updating to forecast F1 race outcomes. Integrates multiple data sources and Monte Carlo simulations for realtime constraint enforcement.",
-        tech: ["Python", "XGBoost", "FastAPI", "React", "Next.js"],
-        link: "https://formulai.vercel.app",
-        github: "https://github.com/Akhil-0412/FormulAI",
-        image: "/projects/formulai.png",
-    },
-    {
         id: "pulse-project",
-        title: "PULSE (PPG Signal AI)",
+        title: "PULSE : Dissertation",
         category: "Healthcare AI & DSP",
         description: "Advanced signal processing on Photoplethysmography data.",
         longDescription:
