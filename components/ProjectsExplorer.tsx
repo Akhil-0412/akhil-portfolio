@@ -63,7 +63,7 @@ const projects: Project[] = [
         tech: ["Python", "PyTorch", "Signal Processing"],
         link: "https://pulse-8suw3ls0b-akhil-0412s-projects.vercel.app/",
         github: "https://github.com/Akhil-0412/PULSE",
-        image: "/projects/PULSE.png",
+        image: "/projects/pulse.png",
     }
 ];
 
