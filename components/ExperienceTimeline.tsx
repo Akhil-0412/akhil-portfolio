@@ -63,9 +63,9 @@ export default function ExperienceTimeline() {
                         <div className="relative w-full h-[360px] hidden lg:block">
                             {/* CENTER (Cantor) */}
                             <img
-                                src="/logo/cantor.png"
+                                src="/logo/cantor_Fitz.png"
                                 alt="Cantor Fitzgerald"
-                                className="absolute top-0 left-1/2 -translate-x-1/2 h-[260px] w-[460px] object-contain bg-white rounded-[50%] p-8 drop-shadow-2xl"
+                                className="absolute top-0 left-1/2 -translate-x-1/2 h-[220px] w-[380px] object-cover rounded-[50%] drop-shadow-2xl"
                             />
 
                             {/* BOTTOM LEFT (BGC) */}
