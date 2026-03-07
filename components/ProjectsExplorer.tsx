@@ -27,7 +27,7 @@ const projects: Project[] = [
         tech: ["Python", "XGBoost", "FastAPI", "React", "Next.js"],
         link: "https://formula-ai-two.vercel.app/",
         github: "https://github.com/Akhil-0412/FormulAI",
-        image: "/projects/formulai.png",
+        image: "/projects/F1.png",
     },
     {
         id: "compliance-analyst",
@@ -39,7 +39,7 @@ const projects: Project[] = [
         tech: ["Python", "FastAPI", "React", "Next.js", "LangChain"],
         link: "https://compliance-analyst-agent.vercel.app",
         github: "https://github.com/Akhil-0412/Compliance-Analyst-Agent",
-        image: "/projects/agentic.png",
+        image: "/projects/Compliance.png",
     },
     {
         id: "smart-saas",
@@ -51,7 +51,7 @@ const projects: Project[] = [
         tech: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
         link: "https://smart-saas-frontend.vercel.app",
         github: "https://github.com/Akhil-0412/Smart_Saas_Dashboard",
-        image: "/projects/saas.png",
+        image: "/projects/Autognosis.png",
     },
     {
         id: "pulse-project",
@@ -63,7 +63,7 @@ const projects: Project[] = [
         tech: ["Python", "PyTorch", "Signal Processing"],
         link: "https://pulse-8suw3ls0b-akhil-0412s-projects.vercel.app/",
         github: "https://github.com/Akhil-0412/PULSE",
-        image: "/projects/pulse.png",
+        image: "/projects/PULSE.png",
     }
 ];
 
