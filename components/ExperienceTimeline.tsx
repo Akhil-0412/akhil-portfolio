@@ -65,7 +65,7 @@ export default function ExperienceTimeline() {
                             <img
                                 src="/logo/Cantor.png"
                                 alt="Cantor Fitzgerald"
-                                className="absolute top-0 left-1/2 -translate-x-1/2 h-60 object-contain drop-shadow-2xl"
+                                className="absolute top-0 left-1/2 -translate-x-1/2 h-72 w-[420px] object-cover rounded-[50%] drop-shadow-2xl"
                             />
 
                             {/* BOTTOM LEFT (BGC) */}
