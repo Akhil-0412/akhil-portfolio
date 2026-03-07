@@ -18,15 +18,15 @@ interface Project {
 
 const projects: Project[] = [
     {
-        id: "agentic-compliance",
-        title: "Agentic Compliance Agent",
+        id: "compliance-analyst",
+        title: "Compliance Analyst Agent",
         category: "Enterprise AI",
         description: "Multi-agent system for automated regulatory compliance and auditing.",
         longDescription:
             "Architected a sophisticated multi-agent system designed to automate complex regulatory compliance tasks. The agent evaluates documents against strict financial and legal regulations, ensuring adherence to compliance rules with full audit trails and minimizing risk.",
         tech: ["Python", "FastAPI", "React", "Next.js", "LangChain"],
-        link: "https://agentic-compliance.vercel.app",
-        github: "https://github.com/Akhil-0412/Agentic_Compliance_Agent_v2",
+        link: "https://compliance-analyst-agent.vercel.app",
+        github: "https://github.com/Akhil-0412/Compliance-Analyst-Agent",
         image: "/projects/agentic.png",
     },
     {
@@ -40,6 +40,18 @@ const projects: Project[] = [
         link: "https://smart-saas-frontend.vercel.app",
         github: "https://github.com/Akhil-0412/Smart_Saas_Dashboard",
         image: "/projects/saas.png",
+    },
+    {
+        id: "f1-podium-predictor",
+        title: "FormulAI",
+        category: "Machine Learning",
+        description: "Multi-stage ML pipeline for predicting Formula 1 podium finishers using historical and real-time data.",
+        longDescription:
+            "Engineered an advanced prediction system leveraging XGBoost, LightGBM, and Bayesian Updating to forecast F1 race outcomes. Integrates multiple data sources and Monte Carlo simulations for realtime constraint enforcement.",
+        tech: ["Python", "XGBoost", "FastAPI", "React", "Next.js"],
+        link: "https://formulai.vercel.app",
+        github: "https://github.com/Akhil-0412/FormulAI",
+        image: "/projects/formulai.png",
     },
     {
         id: "pulse-project",
