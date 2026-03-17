@@ -18,7 +18,7 @@ export default function ResumeChooser() {
                 {!downloaded ? (
                     <motion.a
                         key="download"
-                        href="/resumes/akhileshwar-sanathana.pdf"
+                        href="/resume/akhileshwar-sanathana.pdf"
                         download
                         onClick={handleDownload}
                         initial={{ opacity: 0, scale: 0.9 }}
