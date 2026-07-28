@@ -74,8 +74,8 @@ const projects: Project[] = [
         description: "Advanced signal processing on Photoplethysmography data.",
         longDescription: "Developed a comprehensive digital signal processing pipeline for analyzing PPG data, focusing on noise reduction, feature extraction, and machine learning classification for physiological monitoring.",
         tech: ["Python", "DSP", "Machine Learning", "Data Visualization"],
-        link: "#",
-        github: "#",
+        link: "https://pulse-eight-gold.vercel.app/",
+        github: "https://github.com/Akhil-0412/PULSE",
         image: "/projects/pulse.png",
         glowColor: "rgba(0, 255, 51, 0.6)", // Neon Green
     }
