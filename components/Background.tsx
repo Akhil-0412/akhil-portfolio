@@ -34,7 +34,7 @@ export default function Background() {
             {/* CYAN ORB - Top Left */}
             <motion.div
                 style={{ opacity, scale, rotate }}
-                className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full blur-[120px] bg-gradient-to-br from-cyan-900/40 to-transparent"
+                className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full blur-[120px] bg-gradient-to-br from-green-900/40 to-transparent"
                 animate={{
                     x: [0, 30, 0],
                     y: [0, 40, 0],

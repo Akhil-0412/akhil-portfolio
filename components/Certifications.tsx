@@ -1,6 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, PanInfo } from "framer-motion";
+import { useState, useRef, useCallback } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { GlowEffect } from "@/components/motion-primitives/glow-effect";
+import { TextScramble } from "@/components/core/text-scramble";
+import useCertStore from "../store/useCertStore";
 
 interface Certification {
     id: string;
@@ -11,15 +16,33 @@ interface Certification {
 
 const certifications: Certification[] = [
     {
+        id: "aws",
+        title: "AWS Certified Cloud Practitioner",
+        src: "/certifications/AWS_CLoud.jpg",
+        link: "https://aws.amazon.com/certification/certified-cloud-practitioner/",
+    },
+    {
+        id: "claude-bedrock",
+        title: "Claude Amazon Bedrock",
+        src: "/certifications/Claude_Amazon_Bedrock.jpg",
+        link: "#",
+    },
+    {
+        id: "claude-vertex",
+        title: "Claude Google Vertex AI",
+        src: "/certifications/Claude_Google_Vertex_AI.jpg",
+        link: "#",
+    },
+    {
         id: "github",
         title: "GitHub Copilot",
-        src: "/certifications/GitHub.png",
+        src: "/certifications/GitHubCopilot_Badge.jpg",
         link: "https://www.credly.com/badges/f43652cf-9540-4282-9b9e-a9334d703409/linked_in_profile",
     },
     {
-        id: "google",
+        id: "google-ai",
         title: "Google AI Essentials",
-        src: "/certifications/Google_AI.png",
+        src: "/certifications/Google_AI.jpg",
         link: "https://www.coursera.org/account/accomplishments/verify/HJV7ITUANWYO",
     },
     {
@@ -28,59 +51,166 @@ const certifications: Certification[] = [
         src: "/certifications/IBM.png",
         link: "https://www.credly.com/badges/9e6f3425-0797-41f6-ae60-baccad2fdef4/linked_in_profile",
     },
+    {
+        id: "mcp",
+        title: "Model Context Protocol",
+        src: "/certifications/Model_Context_Protocol.jpg",
+        link: "#",
+    },
+    {
+        id: "tavily",
+        title: "Tavily Search",
+        src: "/certifications/Tavily.png",
+        link: "#",
+    },
 ];
 
+// Safe modulo — prevents negative remainders
+const mod = (n: number, m: number) => ((n % m) + m) % m;
+
 export default function Certifications() {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const hasDragged = useRef(false);
+    
+    const triggerSwipe = useCertStore((state) => state.triggerSwipe);
+    
+    const handleNext = () => {
+        triggerSwipe('right');
+        setCurrentIndex((prev) => prev + 1);
+    };
+    const handlePrev = () => {
+        triggerSwipe('left');
+        setCurrentIndex((prev) => prev - 1);
+    };
+
+    const handleDragStart = () => {
+        hasDragged.current = false;
+        setIsDragging(true);
+    };
+
+    const handleDragEnd = (_e: unknown, info: PanInfo) => {
+        setIsDragging(false);
+        if (Math.abs(info.offset.x) > 5) hasDragged.current = true;
+        if (Math.abs(info.offset.x) > 50) {
+            if (info.offset.x < -50) handleNext();
+            else handlePrev();
+        }
+    };
+
+    const handleCardClick = (link: string, isCardActive: boolean) => {
+        if (hasDragged.current) { hasDragged.current = false; return; }
+        if (isCardActive) window.open(link, "_blank");
+    };
+
     return (
-        <section className="relative py-32 px-6">
-            <div className="max-w-6xl mx-auto">
+        <section className="relative w-full h-full">
+            {/* Full-height flex column — title near top, carousel at hand level */}
+            <div className="w-full h-full flex flex-col items-center px-6" style={{ paddingTop: "12vh" }}>
 
                 {/* TITLE */}
-                <motion.h3
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    viewport={{ once: true }}
-                    className="text-2xl md:text-3xl font-semibold text-center mb-24"
+                <h3 className="w-full flex justify-start mb-8 md:mb-12 text-5xl md:text-6xl lg:text-7xl font-bold text-white/90 tracking-tighter drop-shadow-2xl px-8 md:px-24 lg:px-40">
+                    <TextScramble revealDuration={1200} revealDelay={150}>
+                        Certifications
+                    </TextScramble>
+                </h3>
+
+                {/* CAROUSEL — sits lower, aligned precisely with robot hands */}
+                <div
+                    className="relative h-[380px] md:h-[480px] flex items-center justify-center w-full max-w-5xl mx-auto overflow-visible"
+                    style={{ marginTop: "12vh" }}
                 >
-                    Certifications
-                </motion.h3>
+                    {/* LEFT ARROW */}
+                    <button
+                        onClick={handlePrev}
+                        className="absolute left-0 md:-left-8 z-30 p-3 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all backdrop-blur-md border border-white/10 hidden md:flex items-center justify-center"
+                    >
+                        <ChevronLeft className="w-6 h-6" />
+                    </button>
 
-                {/* CERTIFICATES */}
-                <div className="flex flex-col lg:flex-row items-center justify-center gap-20">
+                    {/* CARD TRACK */}
+                    <div
+                        className="relative w-full h-full flex items-center justify-center overflow-visible"
+                        style={{
+                            WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)",
+                            maskImage: "linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)",
+                        }}
+                    >
+                        {certifications.map((cert, index) => {
+                            const N = certifications.length;
+                            const half = Math.floor(N / 2);
+                            const rel = mod(index - currentIndex + half, N) - half;
 
-                    {certifications.map((cert) => (
-                        <motion.div
-                            key={cert.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            whileHover={{ scale: 1.06, y: -10 }}
-                            transition={{ duration: 0.5, ease: "easeOut" }}
-                            viewport={{ once: true }}
-                            className="cursor-pointer select-none"
-                            onClick={() => window.open(cert.link, "_blank")}
-                        >
-                            <img
-                                src={cert.src}
-                                alt={cert.title}
-                                className={`
-                  object-contain
-                  drop-shadow-[0_30px_80px_rgba(0,0,0,0.7)]
-                  transition-transform
-                  ${cert.id === "ibm"
-                                        ? "max-w-[260px] md:max-w-[300px]"
-                                        : "max-w-[380px] md:max-w-[440px]"
-                                    }
-                `}
-                            />
+                            const xOffset = `${rel * 105}%`;
+                            const scale = rel === 0 ? 1 : 0.85;
+                            const opacity = rel === 0 ? 1 : 0.3;
+                            const zIndex = rel === 0 ? 20 : 10;
+                            const isCardActive = rel === 0;
 
-                            {/* OPTIONAL LABEL */}
-                            <p className="mt-6 text-center text-sm text-white/70">
-                                {cert.title}
-                            </p>
-                        </motion.div>
-                    ))}
+                            return (
+                                <motion.div
+                                    key={cert.id}
+                                    drag="x"
+                                    dragConstraints={{ left: 0, right: 0 }}
+                                    dragElastic={1.0}
+                                    onPointerDown={() => { hasDragged.current = false; }}
+                                    onDragStart={handleDragStart}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => handleCardClick(cert.link, isCardActive)}
+                                    animate={{ x: xOffset, scale, opacity, zIndex }}
+                                    variants={{ hover: { y: -5 } }}
+                                    whileHover={isCardActive && !isDragging ? "hover" : undefined}
+                                    transition={{ type: "spring", stiffness: 100, damping: 25, mass: 0.8 }}
+                                    className={`
+                                        absolute flex flex-col items-center
+                                        w-[280px] md:w-[400px]
+                                        ${isCardActive ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
+                                    `}
+                                >
+                                    <div className="w-full aspect-[4/3] flex items-center justify-center relative">
+                                        <motion.div
+                                            className='pointer-events-none absolute inset-[-5%] -z-10'
+                                            variants={{
+                                                hover: { opacity: 0.4 }
+                                            }}
+                                            initial={{ opacity: 0 }}
+                                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                                        >
+                                            <GlowEffect
+                                                colors={['#0894FF', '#C959DD', '#FF2E54', '#FF9004']}
+                                                mode='colorShift'
+                                                blur='medium'
+                                                duration={4}
+                                            />
+                                        </motion.div>
+                                        <motion.img
+                                            src={cert.src}
+                                            alt={cert.title}
+                                            draggable={false}
+                                            animate={{ filter: "drop-shadow(0px 10px 30px rgba(0,0,0,0.6))" }}
+                                            transition={{ duration: 0.3 }}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
 
+                                    <motion.p
+                                        animate={{ opacity: isCardActive ? 1 : 0 }}
+                                        className="mt-4 text-center text-sm md:text-base font-medium text-white/80 tracking-wide"
+                                    >
+                                        {cert.title}
+                                    </motion.p>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    {/* RIGHT ARROW */}
+                    <button
+                        onClick={handleNext}
+                        className="absolute right-0 md:-right-8 z-30 p-3 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all backdrop-blur-md border border-white/10 hidden md:flex items-center justify-center"
+                    >
+                        <ChevronRight className="w-6 h-6" />
+                    </button>
                 </div>
             </div>
         </section>

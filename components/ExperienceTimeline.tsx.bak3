@@ -1,0 +1,402 @@
+"use client";
+
+import { useRef, useState, useEffect } from "react";
+import { motion, useScroll, useTransform, MotionValue, useMotionTemplate } from "framer-motion";
+import { Calendar, MapPin, Clock } from "lucide-react";
+import { BorderTrail } from '@/components/core/border-trail';
+
+type Entry = {
+  id: string;
+  company?: string;
+  institution?: string;
+  logo?: string;
+  invertLogo?: boolean;
+  role?: string;
+  degree?: string;
+  duration: string;
+  date: string;
+  location: string;
+  bullets?: string[];
+};
+
+const EXPERIENCES: Entry[] = [
+  {
+    id: "peoplelink",
+    company: "PeopleLink Unified Communications",
+    logo: "/logos/peoplelink.png",
+    invertLogo: true,
+    role: "Data & Operations Analyst Intern",
+    duration: "6 Months",
+    date: "Jun 2022 – Dec 2022",
+    location: "Hyderabad, India",
+    bullets: [
+      "Engineered Python and SQL ETL data pipelines to clean, transform, and consolidate operational datasets from multiple sources into a single reliable reference system.",
+      "Built automated scoring services producing structured outputs, collaborating with non-technical stakeholders to translate business needs into data requirements.",
+    ],
+  },
+  {
+    id: "newmark",
+    company: "Newmark",
+    logo: "/logos/newmark.png",
+    invertLogo: true,
+    role: "Software Engineer Intern",
+    duration: "6 Months",
+    date: "Jan 2024 – Jul 2024",
+    location: "London, UK",
+    bullets: [
+      "Transitioned operations teams from manual reporting to automated SQL data platforms, writing maintainable Python automation code deployed on cloud infrastructure.",
+      "Engineered asynchronous queue processing with REST API handling, optimizing operational workflows to cut turnaround latency by 91.67%.",
+      "Applied software engineering best practices around version control, testing, and CI/CD pipelines, upholding SQL audit logging and data governance standards.",
+    ],
+  },
+  {
+    id: "flyrank",
+    company: "FlyRank AI",
+    logo: "/logos/flyrank.svg",
+    invertLogo: true,
+    role: "AI Engineer Intern",
+    duration: "Present",
+    date: "Jun 2026 – Present",
+    location: "Remote",
+    bullets: [
+      "Implemented AI agent workflows and prompt engineering pipelines, building RAG components to support internal tools and data-driven product capabilities.",
+      "Designed evaluation frameworks across 100 test cases to systematically audit AI outputs, conducting prompt testing and regression checks to improve search quality.",
+      "Wrote clean Python and SQL code to prepare, clean, transform, and validate internal datasets, orchestrating automated data retrieval via n8n.",
+      "Collaborated with senior engineers and product stakeholders, delivering technical documentation and structured reports on model performance and service reliability.",
+    ],
+  },
+];
+
+const EDUCATIONS: Entry[] = [
+  {
+    id: "icfai",
+    institution: "ICFAI Tech University",
+    degree: "B.Tech Computer Science & Engineering",
+    duration: "4 Years",
+    date: "2020 – 2024",
+    location: "Hyderabad, India",
+  },
+  {
+    id: "southampton",
+    institution: "University of Southampton",
+    degree: "MSc Artificial Intelligence",
+    duration: "1 Year",
+    date: "2024 – 2025",
+    location: "Southampton, United Kingdom",
+  }
+];
+
+function TimelineCard({
+  entry,
+  index,
+  total,
+  progress,
+  expandedId,
+  setExpandedId,
+  isEducation = false
+}: {
+  entry: Entry;
+  index: number;
+  total: number;
+  progress: MotionValue<number>;
+  expandedId: string | null;
+  setExpandedId: (id: string | null) => void;
+  isEducation?: boolean;
+}) {
+  const isSelected = expandedId === entry.id;
+  const [isLocalExpanded, setIsLocalExpanded] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isSelected) {
+      setIsLocalExpanded(true);
+      setIsClosing(false);
+    } else if (isLocalExpanded) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setIsLocalExpanded(false);
+        setIsClosing(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isSelected, isLocalExpanded]);
+
+  const handleToggle = () => {
+    if (isClosing) return;
+    if (isSelected) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(entry.id);
+    }
+  };
+
+  const isExpanded = isLocalExpanded;
+
+  // Dynamic positioning math based on total entries
+  let y, opacity;
+  
+  if (total === 3) { // For Experience
+    if (index === 0) {
+      opacity = useTransform(progress, [0, 0.05], [0, 1]);
+      y = useTransform(progress, [0, 0.33, 0.66, 1], [0, 0, 200, 400]);
+    } else if (index === 1) {
+      opacity = useTransform(progress, [0, 0.33, 0.38], [0, 0, 1]);
+      y = useTransform(progress, [0, 0.33, 0.66, 1], [0, 0, 0, 200]);
+    } else {
+      opacity = useTransform(progress, [0, 0.66, 0.71], [0, 0, 1]);
+      y = useTransform(progress, [0, 0.66, 1], [0, 0, 0]);
+    }
+  } else if (total === 2) { // For Education
+    if (index === 0) {
+      opacity = useTransform(progress, [0, 0.1], [0, 1]);
+      y = useTransform(progress, [0, 0.5, 1], [0, 0, 200]);
+    } else {
+      opacity = useTransform(progress, [0, 0.5, 0.6], [0, 0, 1]);
+      y = useTransform(progress, [0, 0.5, 1], [0, 0, 0]);
+    }
+  } else {
+    y = 0; opacity = 1;
+  }
+
+  const title = isEducation ? entry.institution : entry.company;
+  const subtitle = isEducation ? entry.degree : entry.role;
+  const hasBullets = entry.bullets && entry.bullets.length > 0;
+
+  // Explicit tailwind classes
+  const styles = {
+    ring: isEducation ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]',
+    boxShadowExpanded: isEducation ? '0_0_40px_rgba(59,130,246,0.2)' : '0_0_40px_rgba(34,197,94,0.2)',
+    boxShadowHover: isEducation ? '0px 0px 30px rgba(59,130,246,0.4)' : '0px 0px 30px rgba(34,197,94,0.4)',
+    boxShadowNormal: isEducation ? '0_0_15px_rgba(59,130,246,0.1)' : '0_0_15px_rgba(34,197,94,0.1)',
+    borderExpanded: isEducation ? 'border-blue-500/60' : 'border-green-500/60',
+    borderNormal: isEducation ? 'border-blue-500/30' : 'border-green-500/30',
+    borderHover: isEducation ? 'group-hover:border-blue-500/60' : 'group-hover:border-green-500/60',
+    bgOverlay: isEducation ? 'bg-blue-500/15' : 'bg-green-500/15',
+    textMain: isEducation ? 'text-blue-500' : 'text-green-500',
+    textMuted: isEducation ? 'text-blue-400' : 'text-green-400',
+    borderTop: isEducation ? 'border-blue-500/20' : 'border-green-500/20',
+    bgDot: isEducation ? 'bg-blue-500' : 'bg-green-500'
+  };
+
+  return (
+    <motion.div
+      style={{ opacity, y, zIndex: isExpanded ? 50 : 30 - index }}
+      className={`absolute top-0 w-full flex ${isEducation ? 'left-0 pl-12 md:pl-16 justify-start' : 'right-0 pr-12 md:pr-16 justify-end'}`}
+    >
+      <div className={`absolute top-8 w-4 h-4 bg-black border-2 rounded-full z-10 ${styles.ring} ${isEducation ? 'left-[18px] -translate-x-1/2' : 'right-[18px] translate-x-1/2'}`} />
+
+      <motion.div
+        layout
+        onClick={handleToggle}
+        whileHover={!isExpanded && !isClosing && hasBullets ? { scale: 1.02, y: -4, boxShadow: styles.boxShadowHover, transition: { duration: 0.2, ease: "easeOut" } } : undefined}
+        className={`group relative ${hasBullets ? 'cursor-pointer' : 'cursor-default'} bg-black/50 border backdrop-blur-2xl ${isExpanded
+          ? `w-[calc(100vw-32px)] md:w-[calc(100vw-64px)] max-w-2xl p-6 md:p-8 rounded-[24px] z-50 shadow-[${styles.boxShadowExpanded}] ${styles.borderExpanded} origin-top-right transition-colors`
+          : `overflow-hidden origin-center ${styles.borderNormal} w-[300px] sm:w-[380px] h-auto min-h-[120px] p-6 rounded-[16px] shadow-[${styles.boxShadowNormal}] ${styles.borderHover} transition-colors duration-300`
+          }`}
+        transition={{ layout: { duration: isExpanded ? 0.4 : 0.25, ease: isExpanded ? [0.22, 1, 0.36, 1] : "easeOut" } }}
+      >
+        {!isExpanded && (
+          <div className={`absolute top-0 left-0 w-full h-full ${styles.bgOverlay} pointer-events-none z-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out`} />
+        )}
+        {!isExpanded && <BorderTrail className={`${styles.textMain} z-0`} />}
+
+        <motion.div layout="position" className="relative z-10">
+          <div className="flex justify-between items-start">
+            <div>
+              {entry.logo ? (
+                <div className="h-8 md:h-10 mb-3 relative flex items-center">
+                  <img 
+                    src={`${entry.logo}?v=2`} 
+                    alt={title} 
+                    className={`h-full object-contain max-w-[200px] opacity-90 ${entry.invertLogo ? 'filter brightness-0 invert' : ''}`} 
+                  />
+                </div>
+              ) : (
+                <h4 className="text-xl md:text-2xl font-bold text-white mb-3 tracking-tight">
+                  {title}
+                </h4>
+              )}
+              <div className="text-gray-300 font-medium mb-1">
+                {subtitle?.replace(" Intern", "")} {!isEducation && <span className="text-gray-500 text-sm ml-1">| Internship</span>}
+              </div>
+              <div className={`${styles.textMuted} flex items-center gap-2 text-sm md:text-base font-mono`}>
+                <Clock className="w-3.5 h-3.5" />
+                {entry.duration}
+              </div>
+              
+              {isEducation && (
+                <div className={`mt-4 pt-4 border-t ${styles.borderTop} ${styles.textMuted} font-mono text-xs flex flex-col gap-2`}>
+                  <span className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5" /> {entry.date}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5" /> {entry.location}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {isExpanded && hasBullets && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: isClosing ? 0 : 1, scale: isClosing ? 0.98 : 1 }}
+            transition={{ duration: isClosing ? 0.15 : 0.3, delay: isClosing ? 0 : 0.1, ease: "easeOut" }}
+            className="mt-6 space-y-4 origin-top"
+          >
+            <div className={`mt-5 pt-5 border-t ${styles.borderTop}`}>
+              <h4 className="text-base md:text-lg font-semibold text-gray-200 mb-3">
+                {subtitle}
+              </h4>
+
+              <div className={`${styles.textMuted} font-mono text-xs mb-5 flex flex-wrap gap-3`}>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> {entry.date}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> {entry.location}
+                </span>
+              </div>
+
+              <ul className="space-y-3">
+                {entry.bullets?.map((bullet, i) => (
+                  <motion.li
+                    key={i}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: isClosing ? 0 : 1, x: isClosing ? 10 : 0 }}
+                    transition={{ delay: isClosing ? 0 : 0.15 + i * 0.05 }}
+                    className="flex gap-3 text-sm md:text-base text-gray-300 leading-relaxed"
+                  >
+                    <span className={`${styles.textMain} mt-1.5 flex-shrink-0`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${styles.bgDot}`} />
+                    </span>
+                    <span>{bullet}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+export default function ExperienceTimeline() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Total height of the section
+  // - First 400vh maps to Experience
+  // - Next 200vh maps to Transformation sweep
+  // - Final 200vh maps to Education
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  // Derived progress values for the 3 phases
+  const expProgress = useTransform(scrollYProgress, [0, 0.45], [0, 1]);
+  const sweepProgress = useTransform(scrollYProgress, [0.45, 0.55], [0, 1]);
+  const eduProgress = useTransform(scrollYProgress, [0.55, 1], [0, 1]);
+
+  const expLineHeight = useTransform(expProgress, [0, 1], ["0%", "100%"]);
+
+  // The sweeping timeline line acts as the scanner!
+  // It moves from right: 18px (pct=100) to left: 18px (pct=0)
+  const pct = useTransform(sweepProgress, [0, 1], [100, 0]);
+  const px = useTransform(sweepProgress, [0, 1], [-22, 18]);
+  const lineLeft = useMotionTemplate`calc(${pct}% + ${px}px)`;
+  
+  // Line styling interpolates smoothly from green to blue during sweep
+  const lineColor = useTransform(sweepProgress, [0, 1], ["#22c55e", "#3b82f6"]);
+  const shadowColor = useTransform(sweepProgress, [0, 1], ["rgba(34,197,94,1)", "rgba(59,130,246,1)"]);
+  const boxShadow = useMotionTemplate`0 0 15px ${shadowColor}`;
+  
+  // The track height also shrinks smoothly during the sweep (Experience has 3 items, Education has 2)
+  const trackBottom = useTransform(sweepProgress, [0, 1], ["148px", "348px"]);
+  
+  // Wipe clips. We use inset(top right bottom left)
+  // When pct = 100 (start), clipExp = inset(0 0 0 0), clipEdu = inset(0 0 0 100%)
+  // When pct = 0 (end), clipExp = inset(0 100% 0 0), clipEdu = inset(0 0 0 0)
+  const clipExp = useTransform(pct, val => `inset(0 ${100 - val}% 0 0)`);
+  const clipEdu = useTransform(pct, val => `inset(0 0 0 ${val}%)`);
+  
+  return (
+    <section ref={containerRef} className="relative w-full h-[800vh] bg-black">
+      <div className="sticky top-0 h-screen w-full max-w-7xl mx-auto px-6 flex items-center justify-center">
+        <div className="w-full md:w-3/4 lg:w-[60%] relative py-4 h-[700px] flex items-center">
+          
+          {/* PERSISTENT TIMELINE TRACK */}
+          <motion.div 
+            style={{ left: lineLeft, bottom: trackBottom }}
+            className="absolute top-8 w-1 bg-white/10 rounded-full z-0" 
+          />
+          
+          {/* PERSISTENT TIMELINE GLOW LINE (The Scanner) */}
+          <motion.div
+            style={{ 
+              left: lineLeft, 
+              bottom: trackBottom,
+              height: expLineHeight,
+              backgroundColor: lineColor,
+              boxShadow: boxShadow
+            }}
+            className="absolute top-8 w-1 rounded-full origin-top z-50"
+          />
+
+          {/* LAYER 1: EXPERIENCE (Old State) */}
+          <motion.div 
+            style={{ clipPath: clipExp }}
+            className="absolute inset-0 pointer-events-auto flex flex-col justify-center"
+          >
+            <h3 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white/90 tracking-tighter drop-shadow-2xl mb-16 text-right pr-6 absolute top-0 right-0 w-full">
+              Experience
+            </h3>
+
+            <div className="relative w-full h-[580px] mt-24">
+              {EXPERIENCES.map((exp, index) => (
+                <TimelineCard 
+                  key={exp.id} 
+                  entry={exp} 
+                  index={index} 
+                  total={EXPERIENCES.length}
+                  progress={expProgress} 
+                  expandedId={expandedId}
+                  setExpandedId={setExpandedId}
+                />
+              ))}
+            </div>
+          </motion.div>
+
+          {/* LAYER 2: EDUCATION (New State) */}
+          <motion.div 
+            style={{ clipPath: clipEdu }}
+            className="absolute inset-0 pointer-events-auto flex flex-col justify-center"
+          >
+            <h3 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white/90 tracking-tighter drop-shadow-2xl mb-16 text-right pr-6 absolute top-0 right-0 w-full">
+              Education
+            </h3>
+
+            <div className="relative w-full h-[580px] mt-24">
+              {EDUCATIONS.map((edu, index) => (
+                <TimelineCard 
+                  key={edu.id} 
+                  entry={edu} 
+                  index={index}
+                  total={EDUCATIONS.length}
+                  progress={eduProgress} 
+                  expandedId={expandedId}
+                  setExpandedId={setExpandedId}
+                  isEducation={true}
+                />
+              ))}
+            </div>
+          </motion.div>
+
+        </div>
+      </div>
+    </section>
+  );
+}

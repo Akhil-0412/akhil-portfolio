@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, MouseEvent } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { X, ExternalLink, Github } from "lucide-react";
+import useProjectStore from "../store/useProjectStore";
 
 interface Project {
     id: string;
@@ -14,6 +15,7 @@ interface Project {
     link?: string;
     github?: string;
     image?: string;
+    glowColor?: string;
 }
 
 const projects: Project[] = [
@@ -21,262 +23,599 @@ const projects: Project[] = [
         id: "f1-podium-predictor",
         title: "FormulAI F1",
         category: "Machine Learning",
-        description: "Multi-stage ML pipeline for predicting Formula 1 podium finishers using historical and real-time data.",
-        longDescription:
-            "Engineered an advanced prediction system leveraging XGBoost, LightGBM, and Bayesian Updating to forecast F1 race outcomes. Integrates multiple data sources and Monte Carlo simulations for realtime constraint enforcement.",
-        tech: ["Python", "XGBoost", "FastAPI", "React", "Next.js"],
-        link: "https://formula-ai-two.vercel.app/",
+        description: "Multi-stage ML pipeline for predicting Formula 1 podium finishers.",
+        longDescription: "Engineered an advanced prediction system leveraging XGBoost, LightGBM, and Bayesian Updating to forecast F1 race outcomes. Integrates multiple data sources and Monte Carlo simulations for realtime constraint enforcement.",
+        tech: ["Python", "XGBoost", "LightGBM", "Optuna", "FastAPI", "React", "Next.js"],
+        link: "https://formulai-f1.vercel.app",
         github: "https://github.com/Akhil-0412/FormulAI",
         image: "/projects/F1.png",
+        glowColor: "rgba(255, 0, 60, 0.6)", // Neon Red
     },
     {
         id: "compliance-analyst",
-        title: "Compliance Analyst Agent",
+        title: "Compliance Analyst",
         category: "Enterprise AI",
         description: "Multi-agent system for automated regulatory compliance and auditing.",
-        longDescription:
-            "Architected a sophisticated multi-agent system designed to automate complex regulatory compliance tasks. The agent evaluates documents against strict financial and legal regulations, ensuring adherence to compliance rules with full audit trails and minimizing risk.",
+        longDescription: "Architected a sophisticated multi-agent system designed to automate complex regulatory compliance tasks. The agent evaluates documents against strict financial and legal regulations, ensuring adherence to compliance rules with full audit trails and minimizing risk.",
         tech: ["Python", "FastAPI", "React", "Next.js", "LangChain"],
         link: "https://compliance-analyst-agent.vercel.app",
         github: "https://github.com/Akhil-0412/Compliance-Analyst-Agent",
         image: "/projects/Compliance.png",
+        glowColor: "rgba(0, 229, 255, 0.6)", // Neon Blue
+    },
+    {
+        id: "ai-hotel-receptionist",
+        title: "Crown & Crest Hotel AI",
+        category: "Generative AI & Voice",
+        description: "An AI voice receptionist for hotels that handles real bookings and invoices over WebRTC.",
+        longDescription: "Engineered a real-time voice agent using LiveKit, Groq STT, Cartesia TTS, and Google Gemini via LangGraph. The agent autonomously orchestrates backend tools via FastMCP to check room availability, execute bookings, query FAQs, and generate branded HTML invoices delivered via SMTP - all through natural spoken conversation.",
+        tech: ["Python", "LiveKit", "LangGraph", "Gemini", "FastMCP", "WebRTC"],
+        link: "https://frontend-pi-rouge-28.vercel.app/",
+        github: "https://github.com/Akhil-0412/Hotel-Receptionist",
+        image: "/projects/HotelReceptionist.png",
+        glowColor: "rgba(255, 215, 0, 0.6)", // Golden
     },
     {
         id: "smart-saas",
         title: "Autognosis",
         category: "Full Stack Web",
         description: "Modern, AI-driven SaaS dashboard with advanced analytics.",
-        longDescription:
-            "Developed a comprehensive Next.js-based SaaS dashboard featuring real-time analytics, user management, and AI-driven diagnostics. Integrated advanced data visualization, secure authentication, and scalable backend services to handle complex business operations seamlessly.",
+        longDescription: "Developed a comprehensive Next.js-based SaaS dashboard featuring real-time analytics, user management, and AI-driven diagnostics. Integrated advanced data visualization, secure authentication, and scalable backend services to handle complex business operations seamlessly.",
         tech: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
         link: "https://smart-saas-frontend.vercel.app",
         github: "https://github.com/Akhil-0412/Smart_Saas_Dashboard",
         image: "/projects/Autognosis.png",
+        glowColor: "rgba(255, 102, 0, 0.6)", // Neon Orange
     },
     {
         id: "pulse-project",
         title: "PULSE : Dissertation",
         category: "Healthcare AI & DSP",
         description: "Advanced signal processing on Photoplethysmography data.",
-        longDescription:
-            "Implemented an advanced deep learning pipeline to analyze Photoplethysmography (PPG) signals. Processed raw physiological data, applied noise reduction algorithms, and developed predictive models for continuous and accurate health monitoring indicators.",
-        tech: ["Python", "PyTorch", "Signal Processing"],
-        link: "https://pulse-8suw3ls0b-akhil-0412s-projects.vercel.app/",
-        github: "https://github.com/Akhil-0412/PULSE",
+        longDescription: "Developed a comprehensive digital signal processing pipeline for analyzing PPG data, focusing on noise reduction, feature extraction, and machine learning classification for physiological monitoring.",
+        tech: ["Python", "DSP", "Machine Learning", "Data Visualization"],
         image: "/projects/pulse.png",
+        glowColor: "rgba(0, 255, 51, 0.6)", // Neon Green
     }
 ];
 
+type Corner = "tl" | "tr" | "bl" | "br";
+
+interface CornerConfig {
+    wrapper: React.CSSProperties;
+    hBar: React.CSSProperties;
+    vBar: React.CSSProperties;
+    textPos: { justify: string; align: string; pad: string };
+}
+
+const cornerConfigs: Record<Corner, CornerConfig> = {
+    tl: {
+        wrapper: { top: 0, left: 0, width: "50%", height: "50%", transformOrigin: "top left" },
+        hBar: { top: 0, left: 0, width: "100%", height: "var(--arm)", borderTopLeftRadius: 16 },
+        vBar: { top: "var(--arm)", left: 0, width: "var(--arm)", bottom: 0 },
+        textPos: { justify: "justify-end", align: "items-start", pad: "pl-5 pb-4 pr-4" },
+    },
+    tr: {
+        wrapper: { top: 0, right: 0, width: "50%", height: "50%", transformOrigin: "top right" },
+        hBar: { top: 0, left: 0, width: "100%", height: "var(--arm)", borderTopRightRadius: 16 },
+        vBar: { top: "var(--arm)", right: 0, width: "var(--arm)", bottom: 0 },
+        textPos: { justify: "justify-end", align: "items-end", pad: "pr-5 pb-4 pl-4" },
+    },
+    bl: {
+        wrapper: { bottom: 0, left: 0, width: "50%", height: "50%", transformOrigin: "bottom left" },
+        hBar: { bottom: 0, left: 0, width: "100%", height: "var(--arm)", borderBottomLeftRadius: 16 },
+        vBar: { top: 0, left: 0, width: "var(--arm)", bottom: "var(--arm)" },
+        textPos: { justify: "justify-start", align: "items-start", pad: "pl-5 pt-4 pr-4" },
+    },
+    br: {
+        wrapper: { bottom: 0, right: 0, width: "50%", height: "50%", transformOrigin: "bottom right" },
+        hBar: { bottom: 0, left: 0, width: "100%", height: "var(--arm)", borderBottomRightRadius: 16 },
+        vBar: { top: 0, right: 0, width: "var(--arm)", bottom: "var(--arm)" },
+        textPos: { justify: "justify-start", align: "items-end", pad: "pr-5 pt-4 pl-4" },
+    },
+};
+
+const itemVariant = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as any } }
+};
+
 export default function ProjectsExplorer() {
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
+    // Debounced hover reset: prevents robot twitching when moving between cards
+    const hoverResetTimer = useRef<NodeJS.Timeout | null>(null);
+
+    const setHoveredWithDebounce = useCallback((id: string | null) => {
+        if (hoverResetTimer.current) {
+            clearTimeout(hoverResetTimer.current);
+            hoverResetTimer.current = null;
+        }
+        if (id !== null) {
+            // Immediate set when hovering a card
+            useProjectStore.getState().setHoveredProject(id);
+        } else {
+            // Debounce the null (leaving a card) by 80ms
+            hoverResetTimer.current = setTimeout(() => {
+                useProjectStore.getState().setHoveredProject(null);
+            }, 80);
+        }
+    }, []);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (hoverResetTimer.current) clearTimeout(hoverResetTimer.current);
+            useProjectStore.getState().setHoveredProject(null);
+        };
+    }, []);
+
+    const corners: { project: Project; corner: Corner }[] = [
+        { project: projects[0], corner: "tl" },
+        { project: projects[1], corner: "tr" },
+        { project: projects[3], corner: "bl" },
+        { project: projects[4], corner: "br" },
+    ];
 
     return (
-        <section className="relative min-h-screen px-6 py-32">
-            <div className="max-w-7xl mx-auto">
-                <div className="mb-20 text-center">
-                    <motion.h3
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-white/40 mb-6"
-                    >
-                        Selected Works
-                    </motion.h3>
-                    <p className="text-gray-400 max-w-2xl mx-auto">
-                        A showcase of advanced engineering in AI, Robotics, and Systems.
-                    </p>
-                </div>
+        <section className="relative px-4 md:px-8 py-24 overflow-hidden">
+            <div className="max-w-5xl mx-auto">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project) => (
-                        <SpotlightCard
-                            key={project.id}
-                            project={project}
-                            onClick={() => setSelectedId(project.id)}
+
+                <div className="relative mx-auto w-full max-w-[1056px]">
+                    <div
+                        className="hidden md:block w-full relative"
+                        onMouseLeave={() => setHoveredWithDebounce(null)}
+                        style={{
+                            "--arm": "clamp(110px, 16vw, 170px)",
+                            aspectRatio: "4 / 3",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            borderRadius: 16,
+                        } as React.CSSProperties}
+                    >
+                        {corners.map(({ project, corner }) => (
+                            <LCornerCard
+                                key={project.id}
+                                project={project}
+                                corner={corner}
+                                expandedId={expandedId}
+                                setExpandedId={setExpandedId}
+                                setHoveredWithDebounce={setHoveredWithDebounce}
+                            />
+                        ))}
+
+                        <CenterCard
+                            project={projects[2]}
+                            expandedId={expandedId}
+                            setExpandedId={setExpandedId}
+                            setHoveredWithDebounce={setHoveredWithDebounce}
                         />
-                    ))}
+                    </div>
+
+                    <div className="md:hidden flex flex-col gap-3">
+                        {[projects[2], ...projects.filter((_, i) => i !== 2)].map(p => (
+                            <motion.button
+                                layoutId={`card-${p.id}`}
+                                key={p.id}
+                                onClick={() => setExpandedId(p.id === expandedId ? null : p.id)}
+                                className="text-left w-full rounded-xl bg-white/[0.03] border border-white/10 p-5 transition-colors relative overflow-hidden"
+                            >
+                                {p.image && (
+                                    <motion.div 
+                                        className="absolute inset-0" 
+                                        style={{ 
+                                            backgroundImage: `url(${p.image})`, 
+                                            backgroundSize: "cover", 
+                                            backgroundPosition: "center"
+                                        }} 
+                                        animate={{ opacity: expandedId === p.id ? 1 : 0.6 }}
+                                        transition={{ duration: 0.3 }}
+                                    />
+                                )}
+                                <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.7)" }} />
+                                <div className="relative z-10">
+                                    <p className="text-[10px] uppercase tracking-widest text-blue-400 font-semibold mb-1">{p.category}</p>
+                                    <h4 className="text-base font-bold text-white">{p.title}</h4>
+                                    <AnimatePresence>
+                                        {expandedId === p.id && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: "auto" }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="mt-4"
+                                            >
+                                                <p className="text-sm text-gray-300 mb-4">{p.description}</p>
+                                                <div className="flex flex-wrap gap-2 mb-4">
+                                                    {p.tech.map(t => (
+                                                        <span key={t} className="px-2 py-1 rounded bg-white/10 text-[10px] text-white">
+                                                            {t}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.button>
+                        ))}
+                    </div>
                 </div>
             </div>
-
-            <AnimatePresence>
-                {selectedId && (
-                    <Modal
-                        project={projects.find((p) => p.id === selectedId)!}
-                        onClose={() => setSelectedId(null)}
-                    />
-                )}
-            </AnimatePresence>
         </section>
     );
 }
 
-function SpotlightCard({ project, onClick }: { project: Project; onClick: () => void }) {
-    const divRef = useRef<HTMLDivElement>(null);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [opacity, setOpacity] = useState(0);
+const springTransition = {
+    type: "spring" as const,
+    stiffness: 120,
+    damping: 20,
+};
 
-    const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-        if (!divRef.current) return;
-        const rect = divRef.current.getBoundingClientRect();
-        setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+const getInverseOffset = (barCfg: React.CSSProperties) => {
+    const offset: React.CSSProperties = {};
+    if (barCfg.top !== undefined) offset.top = barCfg.top === 0 ? 0 : `calc(-1 * ${barCfg.top})`;
+    if (barCfg.bottom !== undefined) offset.bottom = barCfg.bottom === 0 ? 0 : `calc(-1 * ${barCfg.bottom})`;
+    if (barCfg.left !== undefined) offset.left = barCfg.left === 0 ? 0 : `calc(-1 * ${barCfg.left})`;
+    if (barCfg.right !== undefined) offset.right = barCfg.right === 0 ? 0 : `calc(-1 * ${barCfg.right})`;
+    return offset;
+};
+
+function LCornerCard({
+    project,
+    corner,
+    expandedId,
+    setExpandedId,
+    setHoveredWithDebounce,
+}: {
+    project: Project;
+    corner: Corner;
+    expandedId: string | null;
+    setExpandedId: (id: string | null) => void;
+    setHoveredWithDebounce: (id: string | null) => void;
+}) {
+    const [hoverState, setHoverState] = useState<"idle" | "stage1">("idle");
+    const [phase, setPhase] = useState<"idle" | "expanded" | "collapsing">("idle");
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const cfg = cornerConfigs[corner];
+
+    const isExpanded = expandedId === project.id;
+
+    useEffect(() => {
+        if (isExpanded) {
+            setPhase("expanded");
+        } else if (!isExpanded && phase === "expanded") {
+            setPhase("collapsing");
+        } else if (!isExpanded && phase === "collapsing") {
+            const t = setTimeout(() => {
+                setPhase("idle");
+            }, 150);
+            return () => clearTimeout(t);
+        }
+    }, [isExpanded, phase]);
+
+    const showContent = phase === "expanded";
+    const expandArms = phase === "expanded" || phase === "collapsing";
+
+    const imageStyle: React.CSSProperties = project.image ? {
+        backgroundImage: `url(${project.image})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+    } : {};
+
+    const barBase: React.CSSProperties = {
+        position: "absolute",
+        cursor: "pointer",
+        overflow: "hidden",
     };
+
+    const handleMouseEnter = () => {
+        if (isExpanded) return;
+        setHoverState("stage1");
+        setHoveredWithDebounce(project.id);
+        timerRef.current = setTimeout(() => {
+            setExpandedId(project.id);
+        }, 1000);
+    };
+
+    const handleMouseLeave = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setHoverState("idle");
+        setHoveredWithDebounce(null);
+        if (isExpanded) {
+            setExpandedId(null);
+        }
+    };
+
+    const { justify, align, pad } = cfg.textPos;
 
     return (
         <motion.div
-            ref={divRef}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            onClick={onClick}
-            onMouseMove={handleMouseMove}
-            onMouseEnter={() => setOpacity(1)}
-            onMouseLeave={() => setOpacity(0)}
-            className="
-        relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 
-        p-8 cursor-pointer group transition-transform duration-300 hover:scale-[1.02]
-      "
+            style={{ 
+                position: "absolute", 
+                zIndex: expandArms ? 50 : (hoverState !== "idle" ? 30 : 10), 
+                containerType: "size",
+                filter: (hoverState !== "idle" || expandArms) && project.glowColor ? `drop-shadow(0 0 20px ${project.glowColor})` : "none",
+                ...cfg.wrapper 
+            }}
+            animate={{
+                scale: hoverState === "stage1" && !expandArms ? 1.03 : 1,
+                y: hoverState === "stage1" && !expandArms ? -4 : 0,
+            }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={() => setExpandedId(isExpanded ? null : project.id)}
         >
-            {/* Spotlight Gradient */}
-            <div
-                className="pointer-events-none absolute -inset-px opacity-0 transition duration-300 group-hover:opacity-100"
-                style={{
-                    background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(255,255,255,0.1), transparent 40%)`,
+            {/* Horizontal bar */}
+            <motion.div 
+                layout
+                transition={springTransition}
+                id={`hbar-${project.id}`}
+                style={{ 
+                    ...barBase, 
+                    ...cfg.hBar, 
+                    height: expandArms ? "100%" : cfg.hBar.height,
+                    borderTopLeftRadius: expandArms ? 16 : (cfg.hBar.borderTopLeftRadius || 0),
+                    borderTopRightRadius: expandArms ? 16 : (cfg.hBar.borderTopRightRadius || 0),
+                    borderBottomLeftRadius: expandArms ? 16 : (cfg.hBar.borderBottomLeftRadius || 0),
+                    borderBottomRightRadius: expandArms ? 16 : (cfg.hBar.borderBottomRightRadius || 0),
+                    zIndex: 20 
                 }}
-            />
-
-            {/* Content */}
-            <div className="relative z-10 flex flex-col h-full">
-                {project.image && (
-                    <div className="mb-4 overflow-hidden rounded-xl border border-white/5 group-hover:border-white/20 transition-colors">
-                        <img
-                            src={project.image}
-                            alt={project.title}
-                            className="w-full h-40 object-cover transform transition-transform duration-500 group-hover:scale-110"
+            >
+                {/* Fixed background decoupled from animated container size */}
+                <motion.div
+                    layout
+                    transition={springTransition}
+                    style={{
+                        position: "absolute",
+                        ...getInverseOffset(cfg.hBar),
+                        width: "100cqw",
+                        height: "100cqh",
+                        ...imageStyle
+                    }}
+                    animate={{ opacity: hoverState !== "idle" || expandArms ? 1 : 0.6 }}
+                >
+                    {/* Persistent overlay nested inside the fixed-size container */}
+                    <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+                </motion.div>
+                
+                {/* Secondary Content - Mounts via AnimatePresence */}
+                <AnimatePresence>
+                    {showContent && (
+                        <motion.div 
+                            className="absolute inset-0 z-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                         />
-                    </div>
-                )}
-                <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-semibold tracking-wider text-cyan-400 uppercase">
+                    )}
+                </AnimatePresence>
+
+                <div className={`absolute inset-0 z-10 flex flex-col ${justify} ${align} ${expandArms ? "p-8" : pad} transition-all duration-300`}>
+                    <p className="text-[9px] uppercase tracking-widest text-gray-400 font-medium leading-none mb-1">
                         {project.category}
-                    </span>
-                    <div className="flex gap-2">
-                        {project.link && (
-                            <a href={project.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-cyan-400 transition-colors">
-                                <ExternalLink className="w-5 h-5" />
-                            </a>
+                    </p>
+                    <h4 className={`font-bold text-white leading-tight ${expandArms ? "text-2xl mb-4" : "text-sm"}`}>
+                        {project.title}
+                    </h4>
+
+                    <AnimatePresence>
+                        {showContent && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                                transition={{ delay: 0.1, duration: 0.3 }}
+                                className="flex flex-col gap-4 max-w-sm"
+                            >
+                                <p className="text-sm text-gray-200">{project.longDescription || project.description}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {project.tech.map(t => (
+                                        <span key={t} className="px-2 py-1 rounded bg-white/10 text-white text-[10px] border border-white/10">
+                                            {t}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3 mt-2 pointer-events-auto">
+                                    {project.link && (
+                                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-black font-semibold text-xs hover:bg-gray-200 transition-colors">
+                                            <ExternalLink className="w-3 h-3" /> Demo
+                                        </a>
+                                    )}
+                                </div>
+                            </motion.div>
                         )}
-                        {project.github && (
-                            <a href={project.github} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-white transition-colors">
-                                <Github className="w-5 h-5" />
-                            </a>
-                        )}
-                    </div>
+                    </AnimatePresence>
                 </div>
+            </motion.div>
 
-                <h4 className="text-xl font-bold mb-3 group-hover:text-cyan-200 transition-colors">
-                    {project.title}
-                </h4>
-
-                <p className="text-sm text-gray-400 leading-relaxed mb-6 flex-grow">
-                    {project.description}
-                </p>
-
-                <div className="flex flex-wrap gap-2 mt-auto">
-                    {project.tech.map((t) => (
-                        <span key={t} className="text-xs px-2 py-1 rounded-md bg-white/5 text-gray-300 border border-white/5">
-                            {t}
-                        </span>
-                    ))}
-                </div>
-            </div>
+            {/* Vertical bar */}
+            <motion.div 
+                layout
+                transition={springTransition}
+                id={`vbar-${project.id}`}
+                style={{ 
+                    ...barBase, 
+                    ...cfg.vBar, 
+                    width: expandArms ? "100%" : cfg.vBar.width,
+                    borderTopLeftRadius: expandArms ? 16 : (cfg.vBar.borderTopLeftRadius || 0),
+                    borderTopRightRadius: expandArms ? 16 : (cfg.vBar.borderTopRightRadius || 0),
+                    borderBottomLeftRadius: expandArms ? 16 : (cfg.vBar.borderBottomLeftRadius || 0),
+                    borderBottomRightRadius: expandArms ? 16 : (cfg.vBar.borderBottomRightRadius || 0),
+                    zIndex: 10 
+                }}
+            >
+                <motion.div
+                    layout
+                    transition={springTransition}
+                    style={{
+                        position: "absolute",
+                        ...getInverseOffset(cfg.vBar),
+                        width: "100cqw",
+                        height: "100cqh",
+                        ...imageStyle
+                    }}
+                    animate={{ opacity: hoverState !== "idle" || expandArms ? 1 : 0.6 }}
+                >
+                    <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+                </motion.div>
+            </motion.div>
         </motion.div>
     );
 }
 
-function Modal({ project, onClose }: { project: Project; onClose: () => void }) {
+// ─────────────────────────────────────────────────────────
+//  CENTER FEATURED CARD
+//  Sits in the exact negative-space hole carved by the 4 L arms.
+//  No grid involvement — purely top/left/right/bottom: var(--arm)
+// ─────────────────────────────────────────────────────────
+function CenterCard({
+    project,
+    expandedId,
+    setExpandedId,
+    setHoveredWithDebounce,
+}: {
+    project: Project;
+    expandedId: string | null;
+    setExpandedId: (id: string | null) => void;
+    setHoveredWithDebounce: (id: string | null) => void;
+}) {
+    const [hoverState, setHoverState] = useState<"idle" | "stage1">("idle");
+    const [phase, setPhase] = useState<"idle" | "expanded" | "collapsing">("idle");
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const isExpanded = expandedId === project.id;
+
+    useEffect(() => {
+        if (isExpanded) {
+            setPhase("expanded");
+        } else if (!isExpanded && phase === "expanded") {
+            setPhase("collapsing");
+        } else if (!isExpanded && phase === "collapsing") {
+            const t = setTimeout(() => {
+                setPhase("idle");
+            }, 150);
+            return () => clearTimeout(t);
+        }
+    }, [isExpanded, phase]);
+
+    const showContent = phase === "expanded";
+    const expandArms = phase === "expanded" || phase === "collapsing";
+
+    const handleMouseEnter = () => {
+        if (isExpanded) return;
+        setHoverState("stage1");
+        setHoveredWithDebounce(project.id);
+        timerRef.current = setTimeout(() => {
+            setExpandedId(project.id);
+        }, 1000);
+    };
+
+    const handleMouseLeave = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setHoverState("idle");
+        setHoveredWithDebounce(null);
+        if (isExpanded) {
+            setExpandedId(null);
+        }
+    };
+
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="absolute overflow-hidden cursor-pointer"
+            style={{
+                borderRadius: expandArms ? 16 : 12,
+                zIndex: expandArms ? 50 : (hoverState !== "idle" ? 30 : 10),
+                filter: (hoverState !== "idle" || expandArms) && project.glowColor ? `drop-shadow(0 0 20px ${project.glowColor})` : "none"
+            }}
+            animate={{
+                top: expandArms ? 0 : "var(--arm)",
+                left: expandArms ? 0 : "var(--arm)",
+                right: expandArms ? 0 : "var(--arm)",
+                bottom: expandArms ? 0 : "var(--arm)",
+                scale: hoverState === "stage1" && !expandArms ? 1.03 : 1,
+                y: hoverState === "stage1" && !expandArms ? -4 : 0,
+            }}
+            transition={springTransition}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={() => setExpandedId(isExpanded ? null : project.id)}
         >
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="
-          relative w-full max-w-2xl bg-[#0F0F0F] border border-white/10 rounded-3xl 
-          p-8 md:p-10 shadow-2xl overflow-y-auto max-h-[90vh]
-        "
-            >
-                <button
-                    onClick={onClose}
-                    className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                    <X className="w-5 h-5 text-gray-400" />
-                </button>
+            {project.image && (
+                <motion.div 
+                    className="absolute inset-0 z-0" 
+                    style={{
+                        backgroundImage: `url(${project.image})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                    }} 
+                    animate={{ opacity: hoverState !== "idle" || expandArms ? 1 : 0.6 }}
+                    transition={{ duration: 0.3 }}
+                />
+            )}
+            {/* Persistent background overlays */}
+            <div className="absolute inset-0 z-0" style={{ background: "rgba(0,0,0,0.52)" }} />
+            <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
-                <span className="text-sm font-semibold text-cyan-400 uppercase tracking-widest block mb-2 mt-4">
-                    {project.category}
-                </span>
-
-                <h3 className="text-3xl md:text-4xl font-bold mb-6">
-                    {project.title}
-                </h3>
-
-                {project.image && (
-                    <div className="mb-8 overflow-hidden rounded-2xl border border-white/10">
-                        <img
-                            src={project.image}
-                            alt={project.title}
-                            className="w-full max-h-80 object-cover"
-                        />
-                    </div>
+            {/* Secondary Content - Mounts via AnimatePresence */}
+            <AnimatePresence>
+                {showContent && (
+                    <motion.div 
+                        className="absolute inset-0 z-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                    />
                 )}
+            </AnimatePresence>
 
-                <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
-                    <p>{project.longDescription}</p>
-                </div>
+            {/* Content */}
+            <div className={`relative z-10 flex flex-col h-full ${expandArms ? "p-12 justify-center items-center text-center" : "p-6 justify-end"} transition-all duration-300`}>
+                <motion.span
+                    animate={{ opacity: hoverState !== "idle" || expandArms ? 1 : 0.8 }}
+                    className="text-[10px] uppercase tracking-widest text-blue-400 font-semibold mb-2"
+                >
+                    Featured
+                </motion.span>
+                <h4 className={`font-bold text-white leading-tight ${expandArms ? "text-4xl md:text-5xl mb-4" : "text-xl md:text-2xl mb-1"}`}>
+                    {project.title}
+                </h4>
 
-                <div className="mt-8 pt-8 border-t border-white/10">
-                    <h5 className="text-sm font-semibold text-white mb-4 uppercase tracking-wide">Technologies</h5>
-                    <div className="flex flex-wrap gap-2">
-                        {project.tech.map((t) => (
-                            <span key={t} className="px-3 py-1.5 rounded-lg bg-white/10 text-cyan-200 text-sm border border-white/5">
-                                {t}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="mt-8 flex flex-wrap gap-4">
-                    {project.link && (
-                        <a
-                            href={project.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-6 py-3 rounded-full bg-cyan-500 text-black font-semibold hover:bg-cyan-400 transition-colors"
+                <AnimatePresence>
+                    {showContent && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                            transition={{ delay: 0.1, duration: 0.3 }}
+                            className="flex flex-col items-center gap-6 max-w-2xl"
                         >
-                            <ExternalLink className="w-5 h-5" />
-                            View Live App
-                        </a>
+                            <p className="text-gray-200 text-sm md:text-lg">{project.longDescription}</p>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {project.tech.map(t => (
+                                    <span key={t} className="px-3 py-1.5 rounded-full bg-white/10 text-white text-xs border border-white/10">
+                                        {t}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="flex gap-4 mt-2 pointer-events-auto">
+                                {project.link && (
+                                    <a href={project.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-gray-200 transition-colors">
+                                        <ExternalLink className="w-4 h-4" /> Live Demo
+                                    </a>
+                                )}
+                                {project.github && (
+                                    <a href={project.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-colors border border-white/10">
+                                        <Github className="w-4 h-4" /> Source Code
+                                    </a>
+                                )}
+                            </div>
+                        </motion.div>
                     )}
-                    {project.github && (
-                        <a
-                            href={project.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black font-semibold hover:bg-gray-200 transition-colors"
-                        >
-                            <Github className="w-5 h-5" />
-                            View Code
-                        </a>
-                    )}
-                </div>
-            </motion.div>
+                </AnimatePresence>
+            </div>
         </motion.div>
     );
 }

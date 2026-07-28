@@ -1,0 +1,254 @@
+"use client";
+
+import { useRef, useState, useEffect } from "react";
+import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
+import { Calendar, MapPin, Clock } from "lucide-react";
+import { BorderTrail } from '@/components/core/border-trail';
+
+type Experience = {
+  id: string;
+  company: string;
+  logo: string;
+  invertLogo?: boolean;
+  role: string;
+  duration: string;
+  date: string;
+  location: string;
+  bullets: string[];
+};
+
+const EXPERIENCES: Experience[] = [
+  {
+    id: "peoplelink",
+    company: "PeopleLink Unified Communications",
+    logo: "/logos/peoplelink.png",
+    invertLogo: true,
+    role: "Data & Operations Analyst Intern",
+    duration: "6 Months",
+    date: "Jun 2022 – Dec 2022",
+    location: "Hyderabad, India",
+    bullets: [
+      "Engineered Python and SQL ETL data pipelines to clean, transform, and consolidate operational datasets from multiple sources into a single reliable reference system.",
+      "Built automated scoring services producing structured outputs, collaborating with non-technical stakeholders to translate business needs into data requirements.",
+    ],
+  },
+  {
+    id: "newmark",
+    company: "Newmark",
+    logo: "/logos/newmark.png",
+    invertLogo: true,
+    role: "Software Engineer Intern",
+    duration: "6 Months",
+    date: "Jan 2024 – Jul 2024",
+    location: "London, UK",
+    bullets: [
+      "Transitioned operations teams from manual reporting to automated SQL data platforms, writing maintainable Python automation code deployed on cloud infrastructure.",
+      "Engineered asynchronous queue processing with REST API handling, optimizing operational workflows to cut turnaround latency by 91.67%.",
+      "Applied software engineering best practices around version control, testing, and CI/CD pipelines, upholding SQL audit logging and data governance standards.",
+    ],
+  },
+  {
+    id: "flyrank",
+    company: "FlyRank AI",
+    logo: "/logos/flyrank.svg",
+    invertLogo: true,
+    role: "AI Engineer Intern",
+    duration: "Present",
+    date: "Jun 2026 – Present",
+    location: "Remote",
+    bullets: [
+      "Implemented AI agent workflows and prompt engineering pipelines, building RAG components to support internal tools and data-driven product capabilities.",
+      "Designed evaluation frameworks across 100 test cases to systematically audit AI outputs, conducting prompt testing and regression checks to improve search quality.",
+      "Wrote clean Python and SQL code to prepare, clean, transform, and validate internal datasets, orchestrating automated data retrieval via n8n.",
+      "Collaborated with senior engineers and product stakeholders, delivering technical documentation and structured reports on model performance and service reliability.",
+    ],
+  },
+];
+
+function ExperienceCard({
+  exp,
+  index,
+  progress,
+  expandedId,
+  setExpandedId
+}: {
+  exp: Experience;
+  index: number;
+  progress: MotionValue<number>;
+  expandedId: string | null;
+  setExpandedId: (id: string | null) => void;
+}) {
+  const isSelected = expandedId === exp.id;
+  const [isLocalExpanded, setIsLocalExpanded] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isSelected) {
+      setIsLocalExpanded(true);
+      setIsClosing(false);
+    } else if (isLocalExpanded) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setIsLocalExpanded(false);
+        setIsClosing(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isSelected, isLocalExpanded]);
+
+  const handleToggle = () => {
+    if (isClosing) return;
+    if (isSelected) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(exp.id);
+    }
+  };
+
+  const isExpanded = isLocalExpanded;
+
+  // Exact math to create the "insert at top and push down" effect.
+  let y, opacity;
+  if (index === 0) {
+    opacity = useTransform(progress, [0, 0.05], [0, 1]);
+    y = useTransform(progress, [0, 0.33, 0.66, 1], [0, 0, 200, 400]);
+  } else if (index === 1) {
+    opacity = useTransform(progress, [0, 0.33, 0.38], [0, 0, 1]);
+    y = useTransform(progress, [0, 0.33, 0.66, 1], [0, 0, 0, 200]);
+  } else {
+    opacity = useTransform(progress, [0, 0.66, 0.71], [0, 0, 1]);
+    y = useTransform(progress, [0, 0.66, 1], [0, 0, 0]);
+  }
+
+  return (
+    <motion.div
+      style={{ opacity, y, zIndex: isExpanded ? 50 : 30 - index }}
+      className="absolute top-0 right-0 pr-12 md:pr-16 w-full flex justify-end"
+    >
+      <div className="absolute right-[20px] top-8 w-4 h-4 translate-x-1/2 bg-black border-2 border-green-500 rounded-full z-10 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
+
+      <motion.div
+        layout
+        onClick={handleToggle}
+        whileHover={!isExpanded && !isClosing ? { scale: 1.02, y: -4, boxShadow: "0px 0px 30px rgba(34,197,94,0.4)", transition: { duration: 0.2, ease: "easeOut" } } : undefined}
+        className={`group relative cursor-pointer bg-black/50 border backdrop-blur-2xl ${isExpanded
+          ? "w-[calc(100vw-32px)] md:w-[calc(100vw-64px)] max-w-2xl p-6 md:p-8 rounded-[24px] z-50 shadow-[0_0_40px_rgba(34,197,94,0.2)] border-green-500/60 origin-top-right transition-colors"
+          : "overflow-hidden origin-center border-green-500/30 w-[300px] sm:w-[380px] h-auto min-h-[120px] p-6 rounded-[16px] shadow-[0_0_15px_rgba(34,197,94,0.1)] group-hover:border-green-500/60 transition-colors duration-300"
+          }`}
+        transition={{ layout: { duration: isExpanded ? 0.4 : 0.25, ease: isExpanded ? [0.22, 1, 0.36, 1] : "easeOut" } }}
+      >
+        {!isExpanded && (
+          <div className="absolute top-0 left-0 w-full h-full bg-green-500/15 pointer-events-none z-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+        )}
+        {!isExpanded && <BorderTrail className="text-green-500 z-0" />}
+
+        <motion.div layout="position" className="relative z-10">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="h-8 md:h-10 mb-3 relative flex items-center">
+                <img 
+                  src={`${exp.logo}?v=2`} 
+                  alt={exp.company} 
+                  className={`h-full object-contain max-w-[200px] opacity-90 ${exp.invertLogo ? 'filter brightness-0 invert' : ''}`} 
+                />
+              </div>
+              <div className="text-gray-300 font-medium mb-1">
+                {exp.role.replace(" Intern", "")} <span className="text-gray-500 text-sm ml-1">| Internship</span>
+              </div>
+              <div className="text-green-400 flex items-center gap-2 text-sm md:text-base font-mono">
+                <Clock className="w-3.5 h-3.5" />
+                {exp.duration}
+              </div>
+            </div>
+
+          </div>
+        </motion.div>
+
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: isClosing ? 0 : 1, scale: isClosing ? 0.98 : 1 }}
+            transition={{ duration: isClosing ? 0.15 : 0.3, delay: isClosing ? 0 : 0.1, ease: "easeOut" }}
+            className="mt-6 space-y-4 origin-top"
+          >
+            <div className="mt-5 pt-5 border-t border-green-500/20">
+              <h4 className="text-base md:text-lg font-semibold text-gray-200 mb-3">
+                {exp.role}
+              </h4>
+
+              <div className="text-green-400 font-mono text-xs mb-5 flex flex-wrap gap-3">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> {exp.date}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> {exp.location}
+                </span>
+              </div>
+
+              <ul className="space-y-3">
+                {exp.bullets.map((bullet, i) => (
+                  <motion.li
+                    key={i}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: isClosing ? 0 : 1, x: isClosing ? 10 : 0 }}
+                    transition={{ delay: isClosing ? 0 : 0.15 + i * 0.05 }}
+                    className="flex gap-3 text-sm md:text-base text-gray-300 leading-relaxed"
+                  >
+                    <span className="text-green-500 mt-1.5 flex-shrink-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    </span>
+                    <span>{bullet}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+
+    </motion.div>
+  );
+}
+
+export default function ExperienceTimeline() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  const lineHeight = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+
+  return (
+    <section ref={containerRef} className="relative w-full h-[400vh]">
+      <div className="sticky top-0 h-screen w-full max-w-7xl mx-auto px-6 flex items-center justify-end">
+        <div className="w-full md:w-3/4 lg:w-1/2 relative py-4">
+          <h3 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white/90 tracking-tighter drop-shadow-2xl mb-16 text-right pr-6">
+            Experience
+          </h3>
+
+          <div className="relative w-full h-[580px]">
+            <div className="absolute right-[18px] top-8 bottom-[148px] w-1 bg-white/10 rounded-full" />
+
+            <motion.div
+              style={{ height: lineHeight }}
+              className="absolute right-[18px] top-8 w-1 bg-green-500 rounded-full shadow-[0_0_15px_rgba(34,197,94,1)] origin-top z-0"
+            />
+
+            {EXPERIENCES.map((exp, index) => (
+              <ExperienceCard 
+                key={exp.id} 
+                exp={exp} 
+                index={index} 
+                progress={scrollYProgress} 
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
