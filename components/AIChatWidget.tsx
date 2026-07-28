@@ -131,8 +131,8 @@ export default function AIChatWidget({
   const lastAssistantMessage = assistantMessages[activeAssistantIndex];
 
   if (lastAssistantMessage?.id && !timestampsRef.current[lastAssistantMessage.id]) {
-    timestampsRef.current[lastAssistantMessage.id] = lastAssistantMessage.createdAt 
-      ? new Date(lastAssistantMessage.createdAt) 
+    timestampsRef.current[lastAssistantMessage.id] = (lastAssistantMessage as any).createdAt 
+      ? new Date((lastAssistantMessage as any).createdAt) 
       : new Date();
   }
   const activeAiTime = lastAssistantMessage ? timestampsRef.current[lastAssistantMessage.id] : null;
@@ -310,10 +310,10 @@ export default function AIChatWidget({
             <AnimatePresence initial={false}>
               {messages.filter(m => m.role === 'user').map((msg) => {
                 const isActive = msg.id === activeUserId;
-                const msgContent = msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? (typeof msg.content === 'string' ? msg.content : '');
+                const msgContent = msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? (typeof (msg as any).content === 'string' ? (msg as any).content : '');
                 
                 if (msg.id && !timestampsRef.current[msg.id]) {
-                  timestampsRef.current[msg.id] = msg.createdAt ? new Date(msg.createdAt) : new Date();
+                  timestampsRef.current[msg.id] = (msg as any).createdAt ? new Date((msg as any).createdAt) : new Date();
                 }
                 const time = timestampsRef.current[msg.id];
 
