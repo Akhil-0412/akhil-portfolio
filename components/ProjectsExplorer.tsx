@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { X, ExternalLink, Github } from "lucide-react";
+import { X, ExternalLink, Github, Play } from "lucide-react";
 import useProjectStore from "../store/useProjectStore";
 
 interface Project {
@@ -74,6 +74,8 @@ const projects: Project[] = [
         description: "Advanced signal processing on Photoplethysmography data.",
         longDescription: "Developed a comprehensive digital signal processing pipeline for analyzing PPG data, focusing on noise reduction, feature extraction, and machine learning classification for physiological monitoring.",
         tech: ["Python", "DSP", "Machine Learning", "Data Visualization"],
+        link: "#",
+        github: "#",
         image: "/projects/pulse.png",
         glowColor: "rgba(0, 255, 51, 0.6)", // Neon Green
     }
@@ -420,7 +422,12 @@ function LCornerCard({
                                 <div className="flex gap-3 mt-2 pointer-events-auto">
                                     {project.link && (
                                         <a href={project.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-black font-semibold text-xs hover:bg-gray-200 transition-colors">
-                                            <ExternalLink className="w-3 h-3" /> Demo
+                                            <Play className="w-3 h-3" /> Demo
+                                        </a>
+                                    )}
+                                    {project.github && (
+                                        <a href={project.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-white font-semibold text-xs hover:bg-white/20 transition-colors border border-white/10">
+                                            <Github className="w-3 h-3" /> Source
                                         </a>
                                     )}
                                 </div>
@@ -603,7 +610,7 @@ function CenterCard({
                             <div className="flex gap-4 mt-2 pointer-events-auto">
                                 {project.link && (
                                     <a href={project.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-gray-200 transition-colors">
-                                        <ExternalLink className="w-4 h-4" /> Live Demo
+                                        <Play className="w-4 h-4" /> Live Demo
                                     </a>
                                 )}
                                 {project.github && (
