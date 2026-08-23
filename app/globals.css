@@ -82,106 +82,31 @@ body:hover ::-webkit-scrollbar-thumb {
 }
 
 /* ================================
-   APPLE INTELLIGENCE STYLE BORDER
+   AI CHAT — BREATHING EDGE GLOW
    ================================ */
 
-@property --apple-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
+@keyframes edge-glow-breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
 }
 
-@keyframes apple-spin {
-  to { --apple-angle: 360deg; }
-}
-
-@keyframes apple-spin-fast {
-  to { --apple-angle: 720deg; }
-}
-
-/* Base Apple Border Component */
-.apple-border-base {
+/* Soft, single-tone glow ring hugging the viewport edges while AI chat is
+   open. Deliberately calmer than a rainbow/shimmer border — it only breathes
+   in intensity, it doesn't shift hue or position. */
+.edge-glow {
   position: fixed;
   inset: 0;
+  z-index: 91;
   pointer-events: none;
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-}
-
-/* Layer 1 - Outer Glow (Blue, Red, Orange, Yellow) */
-.apple-border-layer-1 {
-  z-index: 91;
-  background: conic-gradient(
-    from var(--apple-angle),
-    #0066ff 0%, #ff3b30 33%, #ff9500 66%, #ffcc00 100%
-  );
-  animation: apple-spin 8s linear infinite;
-  padding: 24px;
-  filter: blur(24px);
-  opacity: 0.3;
-}
-
-/* Layer 2 - Inner Glow (Purple, Pink, Orange, Yellow) */
-.apple-border-layer-2 {
-  z-index: 92;
-  background: conic-gradient(
-    from var(--apple-angle),
-    #af52de 0%, #ff2d55 33%, #ff9500 66%, #ffcc00 100%
-  );
-  animation: apple-spin 8s linear infinite;
-  padding: 6px;
-  filter: blur(6px);
-  opacity: 0.5;
-}
-
-/* Layer 3 - Sharp Core (White, Pink, Peach) */
-.apple-border-layer-3 {
-  z-index: 93;
-  background: conic-gradient(
-    from var(--apple-angle),
-    #ffffff 0%, #ffc0cb 33%, #ffdab9 66%, #ffffff 100%
-  );
-  animation: apple-spin 8s linear infinite;
-  padding: 1px; /* pencil thick */
-  opacity: 1;
-}
-
-/* Layer 4 - Fast Shimmer (Blue/Cyan) */
-.apple-border-layer-4 {
-  z-index: 94;
-  background: conic-gradient(
-    from var(--apple-angle),
-    transparent 0%,
-    transparent 40%,
-    #0066ff 45%,
-    #00ffff 50%,
-    transparent 55%,
-    transparent 100%
-  );
-  animation: apple-spin-fast 8s linear infinite;
-  padding: 4px;
-  filter: blur(2px);
-  opacity: 0.2;
-}
-
-/* Layer 5 - Fast Shimmer Sharp (White) */
-.apple-border-layer-5 {
-  z-index: 95;
-  background: conic-gradient(
-    from var(--apple-angle),
-    transparent 0%,
-    transparent 45%,
-    rgba(255, 255, 255, 1) 50%,
-    transparent 55%,
-    transparent 100%
-  );
-  animation: apple-spin-fast 8s linear infinite;
-  padding: 2px;
-  filter: blur(1px);
-  opacity: 0.2;
+  padding: 22px;
+  background: linear-gradient(135deg, #38bdf8, #a855f7 55%, #38bdf8);
+  filter: blur(18px);
+  animation: edge-glow-breathe 4s ease-in-out infinite;
 }
 
 /* Speech bubble tail triangle */

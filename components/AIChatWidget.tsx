@@ -10,6 +10,19 @@ import { TextShimmer } from "@/components/motion-primitives/text-shimmer";
 import { TextEffect } from "@/components/motion-primitives/text-effect";
 import { TextScramble } from "@/components/motion-primitives/text-scramble";
 
+// ─── Google Theme Caret Animation ─────────────────────────────────────────────
+const GOOGLE_CARET_STYLE = `
+  @keyframes google-caret {
+    0%, 24% { caret-color: #4285F4; } /* Blue */
+    25%, 49% { caret-color: #EA4335; } /* Red */
+    50%, 74% { caret-color: #FBBC05; } /* Yellow */
+    75%, 100% { caret-color: #34A853; } /* Green */
+  }
+  .google-caret-anim {
+    animation: google-caret 2s infinite;
+  }
+`;
+
 // ─── VisionOS glass material ──────────────────────────────────────────────────
 // No border. Pure backdrop-blur + radial gradient fill that fades into nothing.
 const GLASS_STYLE: React.CSSProperties = {
@@ -53,6 +66,7 @@ export default function AIChatWidget({
   iconRect?: DOMRect | null;
 }) {
   const [isListening, setIsListening] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
@@ -156,18 +170,17 @@ export default function AIChatWidget({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* ── APPLE INTELLIGENCE LAYERS ── */}
+          <style>{GOOGLE_CARET_STYLE}</style>
+
+          {/* ── BREATHING EDGE GLOW: subtle, single-tone, opacity-only pulse ── */}
           <motion.div
+            aria-hidden
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="apple-border-base apple-border-layer-1" />
-            <div className="apple-border-base apple-border-layer-2" />
-            <div className="apple-border-base apple-border-layer-3" />
-            <div className="apple-border-base apple-border-layer-4" />
-            <div className="apple-border-base apple-border-layer-5" />
+            <div className="edge-glow" />
           </motion.div>
 
           {/* ── INVISIBLE OVERLAY: catches clicks to close chat, no blur so avatar stays sharp ── */}
@@ -184,8 +197,19 @@ export default function AIChatWidget({
             transition={{ delay: 0.12, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             style={{ ...bubblePos, zIndex: 99, width: "fit-content", minWidth: 280, maxWidth: 480 }}
           >
-            {/* Glass bubble — no border, pure material */}
-            <div style={GLASS_STYLE} className="relative">
+            {/* Glass bubble — no border, pure material.
+                `layout` makes Framer Motion's FLIP engine own the box's size:
+                whenever its rendered bounding box changes shape (full paragraph
+                <-> just the "Thinking..." label, greeting <-> reply), it
+                animates the transform from the old box to the new one directly
+                — no measure-then-animate round trip, so nothing can race
+                against TextEffect's own popLayout exit below. */}
+            <motion.div
+              layout
+              transition={{ layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }}
+              style={GLASS_STYLE}
+              className="relative"
+            >
               <BubbleTail />
 
               {messages.length === 0 ? (
@@ -195,7 +219,7 @@ export default function AIChatWidget({
                     className="text-[9px] font-mono uppercase tracking-[0.18em] mb-3"
                     style={{ color: "rgba(255,255,255,0.35)" }}
                   >
-                    AI · Akhil's Assistant
+                    Augmented Robot Reply
                   </p>
 
                   {/* TextLoop cycling prompts */}
@@ -216,8 +240,24 @@ export default function AIChatWidget({
                   {/* Current Assistant Message */}
                   <div className="flex-1 min-w-0 flex flex-col pt-1">
                     <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-2 font-medium flex items-center justify-between pointer-events-auto">
-                      <span>Akhil's AI {activeAiTime && `· ${formatTime(activeAiTime)}`}</span>
-                      
+                      {/* "Thinking..." replaces "Reply" while a response is in
+                          flight, and the timestamp always trails at the end.
+                          TextShimmer renders a <p> by default, so it needs
+                          as="span" to stay valid inside this inline label. */}
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="shrink-0">Augmented Robot</span>
+                        {isLoading ? (
+                          <TextShimmer as="span" className="shrink-0" duration={1}>
+                            Thinking...
+                          </TextShimmer>
+                        ) : (
+                          <span className="shrink-0">Reply</span>
+                        )}
+                        {activeAiTime && (
+                          <span className="shrink-0">· {formatTime(activeAiTime)}</span>
+                        )}
+                      </span>
+
                       {/* Pagination arrows */}
                       {assistantMessages.length > 1 && (
                         <div className="flex items-center gap-1 opacity-70">
@@ -242,7 +282,7 @@ export default function AIChatWidget({
                       {lastAssistantMessage ? (
                         (() => {
                           // UIMessage in @ai-sdk/react v4 stores content in .parts[]
-                          const msgText =
+                          const rawMsgText =
                             lastAssistantMessage.parts
                               ?.filter((p) => p.type === "text")
                               .map((p) => (p as any).text as string)
@@ -251,204 +291,162 @@ export default function AIChatWidget({
                               ? (lastAssistantMessage as any).content
                               : "");
 
-                          if (isLoading) {
-                            return <span className="text-gray-400 italic">...</span>;
-                          }
+                          // Ultimate fail-safe: scrub long dashes from the LLM output entirely
+                          const msgText = rawMsgText
+                            .replace(/ [–—‑] /g, ', ')
+                            .replace(/[–—‑]/g, ',');
 
+                          // trigger={!isLoading}: the instant a new question is sent,
+                          // isLoading flips true and this unmounts — AnimatePresence
+                          // plays the exit animation using the props from the render
+                          // just before that (still the previous answer's text), and
+                          // TextEffect's exit variants set staggerDirection: -1, so it
+                          // un-reveals word-by-word in reverse of how it came in. While
+                          // isLoading stays true nothing here re-renders, so only the
+                          // "Thinking..." label is visible. When the new answer lands,
+                          // isLoading flips false and it reveals forward again.
                           return (
                             <TextEffect
-                              key={lastAssistantMessage.id}
-                              per="char"
-                              trigger
-                              variants={{
-                                container: {
-                                  hidden: { opacity: 0 },
-                                  visible: {
-                                    opacity: 1,
-                                    transition: { staggerChildren: 0.007 },
-                                  },
-                                },
-                                item: {
-                                  hidden: { opacity: 0, filter: "blur(6px)", y: 2 },
-                                  visible: {
-                                    opacity: 1,
-                                    filter: "blur(0px)",
-                                    y: 0,
-                                    transition: { duration: 0.25 },
-                                  },
-                                },
-                              }}
+                              per="word"
+                              preset="fade-in-blur"
+                              trigger={!isLoading}
+                              speedReveal={2}
+                              as="span"
+                              className="whitespace-pre-wrap"
                             >
-                              {msgText || "..."}
+                              {msgText}
                             </TextEffect>
                           );
                         })()
                       ) : (
-                        <span className="text-gray-400 italic">...</span>
+                        !isLoading && <span className="text-gray-400 italic">...</span>
                       )}
                     </div>
                   </div>
-                  
-                  {/* Thinking Indicator */}
-                  {isLoading && (
-                    <div className="absolute -bottom-6 left-12">
-                      <TextShimmer className="font-mono text-[11px] text-gray-400" duration={1}>
-                        Thinking...
-                      </TextShimmer>
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
+            </motion.div>
           </motion.div>
 
-          {/* ── USER MESSAGES LOG ── */}
-          <div 
-            className="fixed bottom-24 right-2 z-[90] flex flex-col-reverse items-end gap-2 max-h-[60vh] overflow-y-auto pointer-events-none [&::-webkit-scrollbar]:hidden pl-12 pr-6 pb-4 pt-4"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            <AnimatePresence initial={false}>
-              {messages.filter(m => m.role === 'user').map((msg) => {
-                const isActive = msg.id === activeUserId;
-                const msgContent = msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? (typeof (msg as any).content === 'string' ? (msg as any).content : '');
-                
-                if (msg.id && !timestampsRef.current[msg.id]) {
-                  timestampsRef.current[msg.id] = (msg as any).createdAt ? new Date((msg as any).createdAt) : new Date();
-                }
-                const time = timestampsRef.current[msg.id];
-
-                return (
-                  <motion.div
-                    key={msg.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ 
-                      opacity: isActive ? 1 : 0.6, 
-                      y: 0,
-                      scale: isActive ? 1.05 : 1,
-                      x: isActive ? -12 : 0
-                    }}
-                    exit={{ opacity: 0 }}
-                    className={`rounded-lg border px-4 py-2 text-sm text-white max-w-xs pointer-events-auto shadow-lg backdrop-blur-md transition-colors ${
-                      isActive ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10"
-                    }`}
-                    style={{ transformOrigin: "right center" }}
-                  >
-                    <div className="flex items-end justify-between gap-3">
-                      <span className="leading-snug">{msgContent}</span>
-                      {time && (
-                        <span className="text-[9px] text-gray-400 whitespace-nowrap mb-[1px]">
-                          {formatTime(time)}
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-
-          {/* ── CHAT UI LAYER: close button + large input (above blur, below dock) ── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, delay: 0.08 }}
-            className="fixed inset-0 z-[85] flex flex-col items-center justify-end pb-12 pointer-events-none"
-          >
-            {/* Close */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.22 }}
-              onClick={onClose}
-              className="pointer-events-auto absolute top-6 right-6 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition-colors text-xs"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                boxShadow: "0 0 0 0.5px rgba(255,255,255,0.07)",
-              }}
+          {/* ── USER MESSAGES LOG & INPUT CONTAINER ──
+              Centred on the right half of the viewport (75% mark) rather than
+              pinned to the right edge, so it balances the robot on the left. */}
+          <div className="fixed bottom-28 left-[75%] -translate-x-1/2 z-[90] flex flex-col items-end w-full max-w-md pointer-events-none gap-4">
+            
+            {/* USER MESSAGES LOG */}
+            <div 
+              className="flex flex-col justify-end items-end gap-2 max-h-[50vh] overflow-y-auto w-full pt-4 pb-2 pr-2 pl-8 [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              <X className="w-3 h-3" />
-              Esc
-            </motion.button>
+              <AnimatePresence initial={false}>
+                {messages.filter(m => m.role === 'user').map((msg) => {
+                  const isActive = msg.id === activeUserId;
+                  const msgContent = msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? (typeof (msg as any).content === 'string' ? (msg as any).content : '');
+                  
+                  if (msg.id && !timestampsRef.current[msg.id]) {
+                    timestampsRef.current[msg.id] = (msg as any).createdAt ? new Date((msg as any).createdAt) : new Date();
+                  }
+                  const time = timestampsRef.current[msg.id];
 
-            {/* ── LARGE CENTRED INPUT ── */}
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ 
+                        opacity: isActive ? 1 : 0.6, 
+                        y: 0,
+                        scale: isActive ? 1.05 : 1,
+                        x: isActive ? -12 : 0
+                      }}
+                      exit={{ opacity: 0 }}
+                      className={`rounded-xl border px-4 py-2.5 text-sm text-white max-w-xs pointer-events-auto shadow-lg backdrop-blur-md transition-colors ${
+                        isActive ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10"
+                      }`}
+                      style={{ transformOrigin: "right center" }}
+                    >
+                      <div className="flex items-end justify-between gap-3">
+                        <span className="leading-snug">{msgContent}</span>
+                        {time && (
+                          <span className="text-[9px] text-gray-400 whitespace-nowrap mb-[1px]">
+                            {formatTime(time)}
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {/* ── INPUT FORM ── */}
             <motion.form
               onSubmit={handleSubmit}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="pointer-events-auto w-full max-w-xl px-8 flex flex-col items-center gap-3"
+              className="pointer-events-auto w-full max-w-sm flex items-center gap-3 px-4 py-2 rounded-2xl mr-2"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.2)"
+              }}
             >
-              <div
-                className="relative w-full flex flex-col items-center justify-center translate-x-12"
-                style={{ minHeight: "5rem" }}
-              >
-                {/* Placeholder TextLoop with TextScramble */}
-                {!input && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="relative flex-1 flex items-center justify-center min-h-[2.5rem]">
+                {/* Placeholder TextLoop (hidden when focused or typing) */}
+                {!input && !isFocused && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden whitespace-nowrap">
                     <TextLoop interval={3.5}>
-                      <TextScramble className="text-gray-500 text-xl font-light tracking-[0.1em] uppercase" duration={1.2} characterSet=". ">
-                        What PC does Akhil use?
+                      <TextScramble className="text-gray-400 text-[13px] font-light tracking-wide uppercase text-center" duration={1.2} characterSet=". ">
+                        Ask about his projects...
                       </TextScramble>
-                      <TextScramble className="text-gray-500 text-xl font-light tracking-[0.1em] uppercase" duration={1.2} characterSet=". ">
+                      <TextScramble className="text-gray-400 text-[13px] font-light tracking-wide uppercase text-center" duration={1.2} characterSet=". ">
                         What are his top skills?
                       </TextScramble>
-                      <TextScramble className="text-gray-500 text-xl font-light tracking-[0.1em] uppercase" duration={1.2} characterSet=". ">
+                      <TextScramble className="text-gray-400 text-[13px] font-light tracking-wide uppercase text-center" duration={1.2} characterSet=". ">
                         Tell me a fun fact.
+                      </TextScramble>
+                      <TextScramble className="text-gray-400 text-[13px] font-light tracking-wide uppercase text-center" duration={1.2} characterSet=". ">
+                        What PC does Akhil use?
                       </TextScramble>
                     </TextLoop>
                   </div>
                 )}
                 
                 {/* Visible Morphing Text */}
-                <TextMorph className="text-[2.5rem] font-semibold text-white text-center tracking-tight leading-tight pointer-events-none">
-                  {input || " "}
-                </TextMorph>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <TextMorph className="text-[15px] font-medium text-white tracking-tight text-center">
+                    {input || ""}
+                  </TextMorph>
+                </div>
 
-                {/* Invisible Input for Keyboard Capture (removes native caret) */}
+                {/* Visible Input with Native Blinking Caret (Transparent Text) */}
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  className="absolute inset-0 w-full h-full bg-transparent outline-none text-[15px] font-medium text-transparent text-center google-caret-anim"
                   autoComplete="off"
                   spellCheck={false}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-text"
                 />
               </div>
 
-              {/* Hairline separator */}
-              <div
-                className="w-full h-px"
-                style={{
-                  background:
-                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 35%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.18) 65%, transparent 100%)",
-                }}
-              />
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-2.5">
-                <motion.button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="p-2.5 rounded-full text-white transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
-                  style={{
-                    background: "rgba(255,255,255,0.07)",
-                    backdropFilter: "blur(8px)",
-                    boxShadow: "0 0 0 0.5px rgba(255,255,255,0.1)",
-                  }}
-                >
-                  <Send className="w-4 h-4" />
-                </motion.button>
-              </div>
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="p-2 rounded-xl text-white transition-colors disabled:opacity-25"
+                style={{ background: "rgba(255,255,255,0.1)" }}
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </motion.form>
-          </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

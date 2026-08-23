@@ -1,9 +1,11 @@
 "use client";
 
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { User, Briefcase, Award, Code, Zap, Mail, MessageCircle } from "lucide-react";
 import { GlowEffect } from "@/components/motion-primitives/glow-effect";
+import GlassSurface from "@/components/GlassSurface";
+import useNavStore, { SectionId } from "@/store/useNavStore";
 
 const navLinks = [
     { name: "About", id: "about", icon: User },
@@ -18,15 +20,23 @@ export default function Header({
     show,
     isChatOpen,
     onChatOpen,
+    onChatClose,
 }: {
     show: boolean;
     isChatOpen: boolean;
     onChatOpen: (rect: DOMRect) => void;
+    onChatClose: () => void;
 }) {
-    const [activeSection, setActiveSection] = useState("");
-    const mouseY = useMotionValue(Infinity);
+    // Shared with HeroRobot via useNavStore — the robot lives in an unrelated
+    // branch of the tree and needs to know which section is active to hold its
+    // per-section pose (see SECTION_POSES in HeroRobot.tsx).
+    const activeSection = useNavStore((s) => s.activeSection);
+    const mouseX = useMotionValue(Infinity);
 
     const scrollToSection = (id: string) => {
+        // Any other dock item takes over immediately: drop AI mode and head
+        // straight for the section instead of leaving the chat stranded open.
+        if (isChatOpen) onChatClose();
         const section = document.getElementById(id);
         if (section) section.scrollIntoView({ behavior: "smooth" });
     };
@@ -35,13 +45,19 @@ export default function Header({
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
-                    if (entry.isIntersecting) setActiveSection(entry.target.id);
+                    if (entry.isIntersecting) {
+                        useNavStore.getState().setActiveSection(entry.target.id as SectionId);
+                    }
                 });
             },
             { threshold: 0.5 }
         );
-        navLinks.forEach((link) => {
-            const section = document.getElementById(link.id);
+        // "hero" has no dock icon so it isn't in navLinks, but it still has to
+        // be observed. Without it nothing ever sets activeSection back to
+        // 'hero' when you scroll to the top, so the robot stays stuck in
+        // whatever side pose it last had instead of returning to centre.
+        ["hero", ...navLinks.map((link) => link.id)].forEach((id) => {
+            const section = document.getElementById(id);
             if (section) observer.observe(section);
         });
         return () => observer.disconnect();
@@ -49,48 +65,53 @@ export default function Header({
 
     return (
         <motion.header
-            initial={{ x: -100, y: "-60%", opacity: 0 }}
-            animate={show ? { x: 0, y: activeSection === "skills" ? "10%" : "-50%", opacity: 1 } : { x: -100, y: "-50%", opacity: 0 }}
+            initial={{ y: 110, opacity: 0 }}
+            animate={show ? { y: 0, opacity: 1 } : { y: 110, opacity: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="fixed left-4 md:left-6 top-1/2 z-[98] pointer-events-none"
+            /* Full-width flex row centres the dock without a transform, so
+               framer-motion's y animation has the transform property to itself. */
+            className="fixed bottom-5 md:bottom-7 left-0 right-0 z-[98] flex justify-center pointer-events-none"
         >
             <motion.div
-                onMouseMove={(e) => mouseY.set(e.clientY)}
-                onMouseLeave={() => mouseY.set(Infinity)}
-                className="pointer-events-auto flex flex-col items-center gap-2 p-2 rounded-full border border-white/10 bg-black/20 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)]"
+                onMouseMove={(e) => mouseX.set(e.clientX)}
+                onMouseLeave={() => mouseX.set(Infinity)}
+                className="relative pointer-events-auto flex flex-row items-center gap-2 p-2 rounded-full border border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
             >
-                {navLinks.map((item) => (
-                    <DockItem
-                        key={item.id}
-                        item={item}
-                        mouseY={mouseY}
-                        isActive={activeSection === item.id}
-                        onClick={() => scrollToSection(item.id)}
+                <GlassSurface />
+                <div className="relative z-10 flex flex-row items-center gap-2">
+                    {navLinks.map((item) => (
+                        <DockItem
+                            key={item.id}
+                            item={item}
+                            mouseX={mouseX}
+                            isActive={activeSection === item.id}
+                            onClick={() => scrollToSection(item.id)}
+                        />
+                    ))}
+
+                    {/* Divider */}
+                    <div className="h-5 w-px bg-white/10 mx-1" />
+
+                    {/* AI Chat Icon - at the trailing end of the dock */}
+                    <AIChatDockItem
+                        mouseX={mouseX}
+                        isActive={isChatOpen}
+                        isSkillsSection={activeSection === "skills"}
+                        onChatOpen={onChatOpen}
                     />
-                ))}
-
-                {/* Divider */}
-                <div className="w-5 h-px bg-white/10 my-1" />
-
-                {/* AI Chat Icon - at the bottom of the dock */}
-                <AIChatDockItem
-                    mouseY={mouseY}
-                    isActive={isChatOpen}
-                    isSkillsSection={activeSection === "skills"}
-                    onChatOpen={onChatOpen}
-                />
+                </div>
             </motion.div>
         </motion.header>
     );
 }
 
-function DockItem({ item, mouseY, isActive, onClick }: { item: typeof navLinks[0], mouseY: any, isActive: boolean, onClick: () => void }) {
+function DockItem({ item, mouseX, isActive, onClick }: { item: typeof navLinks[0], mouseX: any, isActive: boolean, onClick: () => void }) {
     const ref = useRef<HTMLButtonElement>(null);
     const [isHovered, setIsHovered] = useState(false);
 
-    const distance = useTransform(mouseY, (val: number) => {
-        const bounds = ref.current?.getBoundingClientRect() ?? { y: 0, height: 0 };
-        return val - bounds.y - bounds.height / 2;
+    const distance = useTransform(mouseX, (val: number) => {
+        const bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
+        return val - bounds.x - bounds.width / 2;
     });
 
     const scaleTransform = useTransform(distance, [-100, 0, 100], [1, 1.75, 1]);
@@ -100,8 +121,8 @@ function DockItem({ item, mouseY, isActive, onClick }: { item: typeof navLinks[0
     const Icon = item.icon;
 
     return (
-        <div className="relative group flex items-center h-10">
-            <div className={`absolute left-full ml-4 px-3 py-1.5 rounded-md bg-black/80 border border-white/10 text-white text-sm font-medium whitespace-nowrap transition-all duration-200 pointer-events-none origin-left ${isHovered ? "opacity-100 scale-100 z-50" : "opacity-0 scale-95 z-0"}`}>
+        <div className="relative group flex items-end justify-center w-10 h-10">
+            <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-md bg-black/80 border border-white/10 text-white text-sm font-medium whitespace-nowrap transition-all duration-200 pointer-events-none origin-bottom ${isHovered ? "opacity-100 scale-100 z-50" : "opacity-0 scale-95 z-0"}`}>
                 {item.name}
             </div>
             <motion.button
@@ -110,23 +131,23 @@ function DockItem({ item, mouseY, isActive, onClick }: { item: typeof navLinks[0
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={onClick}
-                className={`w-10 h-10 origin-center relative flex items-center justify-center rounded-full transition-colors duration-300 ${isActive ? "bg-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/20" : "bg-transparent hover:bg-white/5 border border-transparent"}`}
+                className={`w-10 h-10 origin-bottom relative flex items-center justify-center rounded-full transition-colors duration-300 ${isActive ? "bg-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/20" : "bg-transparent hover:bg-white/5 border border-transparent"}`}
                 aria-label={item.name}
             >
                 <Icon className={`w-1/2 h-1/2 transition-colors ${isActive ? "text-white" : "text-gray-400 group-hover:text-white"}`} strokeWidth={isActive ? 2.5 : 2} />
-                {isActive && <div className="absolute -left-1 w-1 h-1 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
+                {isActive && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
             </motion.button>
         </div>
     );
 }
 
-function AIChatDockItem({ mouseY, isActive, isSkillsSection, onChatOpen }: { mouseY: any, isActive: boolean, isSkillsSection: boolean, onChatOpen: (rect: DOMRect) => void }) {
+function AIChatDockItem({ mouseX, isActive, isSkillsSection, onChatOpen }: { mouseX: any, isActive: boolean, isSkillsSection: boolean, onChatOpen: (rect: DOMRect) => void }) {
     const ref = useRef<HTMLButtonElement>(null);
     const [isHovered, setIsHovered] = useState(false);
 
-    const distance = useTransform(mouseY, (val: number) => {
-        const bounds = ref.current?.getBoundingClientRect() ?? { y: 0, height: 0 };
-        return val - bounds.y - bounds.height / 2;
+    const distance = useTransform(mouseX, (val: number) => {
+        const bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
+        return val - bounds.x - bounds.width / 2;
     });
 
     const scaleTransform = useTransform(distance, [-100, 0, 100], [1, 1.75, 1]);
@@ -139,12 +160,11 @@ function AIChatDockItem({ mouseY, isActive, isSkillsSection, onChatOpen }: { mou
     };
 
     const shouldGlow = isHovered || isActive || isSkillsSection;
-    const showTooltip = isHovered || isActive;
 
     return (
-        <div className="relative group flex items-center h-10">
-            <div className={`absolute left-full ml-4 px-3 py-1.5 rounded-md bg-black/80 border border-white/10 text-white text-sm font-medium whitespace-nowrap transition-all duration-200 pointer-events-none origin-left ${showTooltip ? "opacity-100 scale-100 z-50" : "opacity-0 scale-95 z-0"}`}>
-                {isActive ? "Close AI" : "AI Assistant"}
+        <div className="relative group flex items-end justify-center w-10 h-10">
+            <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-md bg-black/80 border border-white/10 text-white text-sm font-medium whitespace-nowrap transition-all duration-200 pointer-events-none origin-bottom ${isHovered ? "opacity-100 scale-100 z-50" : "opacity-0 scale-95 z-0"}`}>
+                AI Assistant
             </div>
             <motion.button
                 ref={ref}
@@ -153,7 +173,7 @@ function AIChatDockItem({ mouseY, isActive, isSkillsSection, onChatOpen }: { mou
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleClick}
                 aria-label="AI Assistant"
-                className={`w-10 h-10 origin-center relative flex items-center justify-center rounded-full transition-colors duration-300 ${isActive ? "bg-white/10 border border-white/20" : "bg-transparent hover:bg-white/5 border border-transparent"}`}
+                className={`w-10 h-10 origin-bottom relative flex items-center justify-center rounded-full transition-colors duration-300 ${isActive ? "bg-white/10 border border-white/20" : "bg-transparent hover:bg-white/5 border border-transparent"}`}
             >
                 {shouldGlow && (
                     <GlowEffect
@@ -175,7 +195,7 @@ function AIChatDockItem({ mouseY, isActive, isSkillsSection, onChatOpen }: { mou
                 {isActive && (
                     <motion.div
                         layoutId="ai-active-dot"
-                        className="absolute -left-1 w-1 h-1 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+                        className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]"
                     />
                 )}
             </motion.button>

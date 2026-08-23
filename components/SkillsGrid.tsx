@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     SiAnthropic, SiClaude, SiLangchain, SiFastapi,
@@ -75,10 +75,73 @@ const allSkills: Skill[] = [
 
 function SkillCard({ skill }: { skill: Skill }) {
     const { Icon, initials, color } = skill;
+    const cardRef = useRef<HTMLDivElement>(null);
+    const [isHovered, setIsHovered] = useState(false);
+
+    const handleMouseEnter = (e: React.MouseEvent) => {
+        if (!cardRef.current) return;
+        const rect = cardRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const col = x < rect.width / 3 ? -1 : x > (2 * rect.width) / 3 ? 1 : 0;
+        const row = y < rect.height / 3 ? -1 : y > (2 * rect.height) / 3 ? 1 : 0;
+
+        let startX = col * 500; 
+        let startY = row * 250; 
+        let startScale = 2.5;
+
+        if (col === 0 && row === 0) {
+             startX = 0; startY = 0; startScale = 0;
+        }
+
+        const blobs = cardRef.current.querySelectorAll('.blob-card__blob') as NodeListOf<HTMLElement>;
+        blobs.forEach(b => b.style.transition = 'none');
+
+        cardRef.current.style.setProperty('--start-x', `${startX}%`);
+        cardRef.current.style.setProperty('--start-y', `${startY}%`);
+        cardRef.current.style.setProperty('--start-scale', `${startScale}`);
+        
+        void cardRef.current.offsetWidth;
+        
+        blobs.forEach(b => b.style.transition = '');
+        
+        setIsHovered(true);
+    };
+
+    const handleMouseLeave = (e: React.MouseEvent) => {
+        if (!cardRef.current) {
+            setIsHovered(false);
+            return;
+        }
+        const rect = cardRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const col = x < rect.width / 3 ? -1 : x > (2 * rect.width) / 3 ? 1 : 0;
+        const row = y < rect.height / 3 ? -1 : y > (2 * rect.height) / 3 ? 1 : 0;
+
+        let startX = col * 500; 
+        let startY = row * 250; 
+        let startScale = 2.5;
+
+        if (col === 0 && row === 0) {
+             startX = 0; startY = 0; startScale = 0;
+        }
+
+        cardRef.current.style.setProperty('--start-x', `${startX}%`);
+        cardRef.current.style.setProperty('--start-y', `${startY}%`);
+        cardRef.current.style.setProperty('--start-scale', `${startScale}`);
+        
+        setIsHovered(false);
+    };
 
     return (
         <div 
-            className="blob-card group flex min-h-[100px] flex-row items-center justify-start border-b border-r border-white/10 px-6 py-4 transition-all duration-700 relative overflow-hidden"
+            ref={cardRef}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            className={`blob-card group flex min-h-[100px] flex-row items-center justify-start border-b border-r border-white/10 px-6 py-4 transition-all duration-700 relative overflow-hidden ${isHovered ? 'is-hovered' : ''}`}
         >
             <div className="blob-card__inner">
                 <div className="blob-card__blobs">
@@ -123,12 +186,9 @@ function SkillCard({ skill }: { skill: Skill }) {
 }
 
 export default function SkillsGrid() {
-    const [visibleSkills, setVisibleSkills] = useState<Skill[]>([]);
+    const [visibleSkills, setVisibleSkills] = useState<Skill[]>(() => allSkills.slice(0, 15));
 
     useEffect(() => {
-        // Initialize with first 15 skills (3x5 grid)
-        setVisibleSkills(allSkills.slice(0, 15));
-
         const interval = setInterval(() => {
             setVisibleSkills(currentVisible => {
                 const newVisible = [...currentVisible];
@@ -160,7 +220,7 @@ export default function SkillsGrid() {
     // Prevent hydration mismatch by rendering a placeholder grid initially if empty
     if (visibleSkills.length === 0) {
         return (
-            <section className="relative w-full overflow-hidden py-24 pl-16 md:pl-24">
+            <section className="relative w-full h-full flex flex-col justify-center overflow-hidden py-12">
                 <div className="mb-16 text-center">
                     <h2 className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                         Skills
@@ -175,7 +235,7 @@ export default function SkillsGrid() {
     }
 
     return (
-        <section className="relative w-full overflow-hidden py-24 pl-16 md:pl-24">
+        <section className="relative w-full h-full flex flex-col justify-center overflow-hidden py-12">
             <style dangerouslySetInnerHTML={{
                 __html: `
                 .blob-card {
@@ -207,19 +267,19 @@ export default function SkillsGrid() {
                   height: 100%;
                   background: #ffffff;
                   border-radius: 100%;
-                  transform: translate3d(0, 250%, 0) scale(2.5);
+                  transform: translate3d(var(--start-x, 0%), var(--start-y, 250%), 0) scale(var(--start-scale, 2.5));
                   transition: transform 0.45s;
                 }
                 @supports(filter: url('#goo')) {
                   .blob-card__blob {
-                    transform: translate3d(0, 250%, 0) scale(2.5);
+                    transform: translate3d(var(--start-x, 0%), var(--start-y, 250%), 0) scale(var(--start-scale, 2.5));
                   }
                 }
-                .blob-card:hover .blob-card__blob {
+                .blob-card.is-hovered .blob-card__blob {
                   transform: translateZ(0) scale(2.5);
                 }
                 @supports(filter: url('#goo')) {
-                  .blob-card:hover .blob-card__blob {
+                  .blob-card.is-hovered .blob-card__blob {
                     transform: translateZ(0) scale(2.5);
                   }
                 }
@@ -240,7 +300,7 @@ export default function SkillsGrid() {
             </svg>
 
             <div className="mb-16 text-center">
-                <h2 className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-4xl font-bold text-transparent md:text-5xl pr-16 md:pr-24">
+                <h2 className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                     Skills
                 </h2>
             </div>

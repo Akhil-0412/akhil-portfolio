@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { X, ExternalLink, Github, Play } from "lucide-react";
 import useProjectStore from "../store/useProjectStore";
+import VerticalProjectsLabel from "./VerticalProjectsLabel";
 
 interface Project {
     id: string;
@@ -160,11 +161,18 @@ export default function ProjectsExplorer() {
     ];
 
     return (
-        <section className="relative px-4 md:px-8 py-24 overflow-hidden">
-            <div className="max-w-5xl mx-auto">
+        <section className="relative w-full h-full flex items-center px-4 md:px-8 overflow-hidden">
+            <VerticalProjectsLabel />
+
+            <div className="max-w-5xl mx-auto w-full">
 
 
-                <div className="relative mx-auto w-full max-w-[1056px]">
+                {/* Width is derived from the viewport height so the 4:3 grid always
+                    fits inside the pinned h-screen frame instead of being clipped. */}
+                <div
+                    className="relative mx-auto w-full max-w-[1056px]"
+                    style={{ width: "min(100%, calc((100vh - 9rem) * 4 / 3))" }}
+                >
                     <div
                         className="hidden md:block w-full relative"
                         onMouseLeave={() => setHoveredWithDebounce(null)}

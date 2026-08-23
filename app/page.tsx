@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
+import useNavStore from "../store/useNavStore";
 import Hero from "../components/Hero";
 import Header from "../components/Header";
 import Background from "../components/Background";
@@ -13,6 +14,7 @@ import SkillsGrid from "../components/SkillsGrid";
 import AIChatWidget from "../components/AIChatWidget";
 import AboutMeFlipCard from "../components/AboutMeFlipCard";
 import ResumeChooser from "../components/ResumeChooser";
+import PinnedSection from "../components/PinnedSection";
 
 export default function Home() {
   const [scrolledPastHero, setScrolledPastHero] = useState(false);
@@ -24,6 +26,12 @@ export default function Home() {
   const handleChatOpen = (rect: DOMRect) => {
     setChatIconRect(rect);
     setIsChatOpen(true);
+    useNavStore.getState().setChatOpen(true);
+  };
+
+  const closeChat = () => {
+    setIsChatOpen(false);
+    useNavStore.getState().setChatOpen(false);
   };
 
   const { scrollYProgress } = useScroll({
@@ -65,8 +73,8 @@ export default function Home() {
     <>
       <main className="relative text-white overflow-clip bg-black">
         <Background />
-        <Header show={scrolledPastHero} isChatOpen={isChatOpen} onChatOpen={handleChatOpen} />
-        <AIChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} iconRect={chatIconRect} />
+        <Header show={scrolledPastHero} isChatOpen={isChatOpen} onChatOpen={handleChatOpen} onChatClose={closeChat} />
+        <AIChatWidget isOpen={isChatOpen} onClose={closeChat} iconRect={chatIconRect} />
 
         {/* ── HERO ─────────────────────────────────────────── */}
         <section id="hero" className="relative z-10 w-full min-h-screen">
@@ -81,17 +89,17 @@ export default function Home() {
           className={isChatOpen ? "pointer-events-none select-none" : ""}
         >
           {/* ── ABOUT ────────────────────────────────────────── */}
-          <section id="about" className="relative z-10 w-full min-h-screen">
+          <PinnedSection id="about">
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="relative z-20 flex items-center justify-end px-6 md:pl-16 md:pr-32 lg:pr-48 xl:pr-[15%] py-32 min-h-screen"
+              className="relative z-20 w-full h-full flex items-center justify-end px-6 md:pl-16 md:pr-32 lg:pr-48 xl:pr-[15%] py-12"
             >
               <AboutMeFlipCard />
             </motion.div>
-          </section>
+          </PinnedSection>
 
           {/* ── EXPERIENCE ───────────────────────────────────── */}
           <section id="experience" className="relative z-10">
@@ -110,14 +118,14 @@ export default function Home() {
           </section>
 
           {/* ── PROJECTS ─────────────────────────────────────── */}
-          <section id="projects" className="relative z-10 w-full mt-10">
+          <PinnedSection id="projects">
             <ProjectsExplorer />
-          </section>
+          </PinnedSection>
 
           {/* ── SKILLS ───────────────────────────────────────── */}
-          <section id="skills" className="relative z-10 w-full mt-10 mb-48">
+          <PinnedSection id="skills">
             <SkillsGrid />
-          </section>
+          </PinnedSection>
 
           {/* ── FOOTER / CONTACT ───────────────────────────────── */}
           <footer id="contact" className="relative z-10 w-full pt-12 bg-black">

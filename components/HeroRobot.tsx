@@ -6,6 +6,33 @@ import { useGLTF, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import useProjectStore from "../store/useProjectStore";
 import useCertStore from "../store/useCertStore";
+import useNavStore, { SectionId } from "../store/useNavStore";
+
+// ── PER-SECTION IDLE POSES ───────────────────────────────────────────────────
+// Where the robot stands while a given dock section is active. Two "zones":
+// left, beside text-heavy content (About/Experience/Certifications/Contact),
+// and centered, for showcase moments (Projects/Skills). Certifications keeps
+// the same base as About/Experience so the existing certXOffset/certYOffset/
+// certYRot swipe-choreography (below) — which is tuned to cancel exactly this
+// base — still lands centered while the user is actually swiping the deck.
+const SECTION_POSES: Record<SectionId, { x: number; y: number; z: number; rotY: number }> = {
+  hero:           { x: 0,    y: 0,   z: 0,   rotY: 0 },
+  about:          { x: -1.5, y: 0.6, z: 0,   rotY: 0.55 },
+  experience:     { x: -1.5, y: 0.6, z: 0,   rotY: 0.55 },
+  certifications: { x: -1.5, y: 0.6, z: 0,   rotY: 0.55 },
+  projects:       { x: 0,    y: 0,   z: 0.1, rotY: 0 },
+  skills:         { x: 0,    y: 0,   z: 0.1, rotY: 0 },
+  contact:        { x: -1.5, y: 0.6, z: 0,   rotY: 0.55 },
+};
+
+// Where the robot stands while the AI chat is open — deliberately independent
+// of whichever section was active, so opening chat "deselects" the section
+// pose. Closing chat re-reads the (unchanged, since scroll is locked while
+// chat is open) active section and returns exactly there.
+// Held to the left so the chat column (centred on the right half of the
+// viewport) has clear space, and turned slightly to face it. The speech bubble
+// tracks the head via --ai-head-x/y, so it follows the robot across.
+const AI_CHAT_POSE = { x: -2.0, y: 0.3, z: 0.1, rotY: 0.5 };
 
 // ── PROJECT HOVER POSE DEFINITIONS ───────────────────────────────────────────
 interface ProjectPose {
@@ -49,13 +76,6 @@ const PROJECT_POSES: Record<string, ProjectPose> = {
     l_sh: [-0.60, -0.50, 0.35], l_el: [-1.40, 0.40, -1.30], l_hd: [-0.70, 0.10, -0.25],
     r_sh: [-0.15, -0.60, -0.10], r_el: [-2.00, 0.05, -1.20], r_hd: [-0.50, 0.15, -0.30],
   },
-};
-
-// Neutral pose when in Projects section but not hovering any card
-const PROJECTS_NEUTRAL_POSE: ProjectPose = {
-  bot_x: 0.0, bot_y: 0.0, bot_z: 0.1, bot_rot_y: 0.0,
-  l_sh: [0, 0, 0], l_el: [0, 0, 0], l_hd: [0, 0, 0],
-  r_sh: [0, 0, 0], r_el: [0, 0, 0], r_hd: [0, 0, 0],
 };
 
 const CERT_POSES: Record<string, ProjectPose> = {
@@ -268,7 +288,6 @@ function RobotModel() {
   useFrame((state, delta) => {
     const now = Date.now();
     const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
-    const viewH = typeof window !== "undefined" ? window.innerHeight : 800;
 
     // certProgress: 0 = outside certs, 1 = fully in view
     // Driven by the __cert_progress__ window event from page.tsx
@@ -308,20 +327,6 @@ function RobotModel() {
 
     // ── CERT HOVER STATE ──
     const activeSwipe = useCertStore.getState().activeSwipe;
-
-    // Detect if we're scrolled to the Projects section
-    // Projects section starts after Certifications (h-[300vh]) + Experience + About + Hero
-    // We use a generous range: if scrollY puts us in the projects zone
-    const docH = typeof document !== 'undefined' ? document.documentElement.scrollHeight : 5000;
-    const projectsSection = typeof document !== 'undefined'
-      ? document.getElementById('projects')
-      : null;
-    const projectsSectionTop = projectsSection ? projectsSection.offsetTop : docH * 0.65;
-    const projectsSectionBottom = projectsSection
-      ? projectsSection.offsetTop + projectsSection.offsetHeight
-      : docH * 0.85;
-    const isInProjectsZone = scrollY + viewH * 0.5 > projectsSectionTop &&
-                              scrollY < projectsSectionBottom;
 
     // ── HEAD: mouse tracking — SUSPENDED during project hover ─────────────────
     if (headBoneRef.current && !isProjectHover) {
@@ -666,64 +671,71 @@ function RobotModel() {
 
     // ── MODEL WORLD TRANSFORM ─────────────────────────────────────────────────
     if (modelRef.current) {
-      // Base hero→side transition
-      // Here, `scrollProgress` goes from 0 to 1. 
-      // When fully scrolled down (1), the robot moves to X: -1.5 (left side).
-      const baseXPos  = -scrollProgress * 1.5;
-      const baseYRot  = scrollProgress * 0.55;
+      // Read from zustand every tick — same no-stale-closure pattern as the
+      // project-hover/cert-swipe state above.
+      const isChatOpenNow = useNavStore.getState().isChatOpen;
+      const activeSection = useNavStore.getState().activeSection;
+      const sectionPose = SECTION_POSES[activeSection] ?? SECTION_POSES.hero;
+
       const baseScale = 3.4 * (1.0 - scrollProgress * 0.1);
-      const baseYPos  = -5.0 + scrollProgress * 0.6;
 
       // During certifications: robot moves back toward the center and faces straight
       // 💡 HOW TO TWEAK POSITIONS:
       // - To move the robot further right, INCREASE the 1.5 below (e.g., 1.8).
       // - To move it further left, DECREASE the 1.5 below (e.g., 1.0 or 1.2).
-      // Since baseXPos is -1.5, adding exactly +1.5 makes the final X position 0 (dead center).
-      const certXOffset = certProgress * 1.5; 
-      
+      // Since sectionPose.x is -1.5 for certifications, adding exactly +1.5 makes the final X position 0 (dead center).
+      const certXOffset = certProgress * 1.5;
+
       // - To make the robot float higher, INCREASE the 0.15 below.
       const certYOffset = certProgress * 0.15 + Math.sin(t * 1.8) * 0.01 * certProgress; // Slight float up
-      
-      // - To make the robot rotate, adjust the -0.55 below. 
-      // Right now it perfectly cancels the baseYRot of 0.55 so it faces straight.
-      const certYRot    = -0.55 * certProgress; 
 
-      let targetXPos, targetYPos, targetYRot, targetScale;
-      
+      // - To make the robot rotate, adjust the -0.55 below.
+      // Right now it perfectly cancels sectionPose.rotY (0.55) so it faces straight.
+      const certYRot    = -0.55 * certProgress;
+
+      let targetXPos, targetYPos, targetZPos, targetYRot, targetScale;
+
       if (poseControls.forcePose) {
         // When forced, disable all scroll-based static animations.
         // The robot stays exactly where the joystick puts it (relative to baseline).
         targetXPos  = poseControls.bot_x;
-        targetYPos  = -5.0 + poseControls.bot_y; 
+        targetYPos  = -5.0 + poseControls.bot_y;
+        targetZPos  = poseControls.bot_z;
         targetYRot  = poseControls.bot_rot_y;
+        targetScale = 3.4;
+      } else if (isChatOpenNow) {
+        // AI chat open: deselect from whatever section pose was active (and
+        // override a possibly-stale project hover — the project grid goes
+        // pointer-events-none the instant chat opens, but hoveredProjectId
+        // can only clear on a real mouseleave, which won't fire if the click
+        // that opened chat didn't first leave the hovered card) and hold a
+        // centered "listening" stance instead. Closing chat falls back to the
+        // section branch below, which re-reads the (unchanged) active section
+        // — so the robot returns to right where it was.
+        targetXPos  = AI_CHAT_POSE.x + poseControls.bot_x;
+        targetYPos  = -5.0 + AI_CHAT_POSE.y + poseControls.bot_y;
+        targetZPos  = AI_CHAT_POSE.z + poseControls.bot_z;
+        targetYRot  = AI_CHAT_POSE.rotY + poseControls.bot_rot_y;
         targetScale = 3.4;
       } else if (isProjectHover && activePose) {
         // Project hover: position the robot exactly at the pose's world coords
         targetXPos  = activePose.bot_x;
         targetYPos  = -5.0 + activePose.bot_y;
+        targetZPos  = activePose.bot_z;
         targetYRot  = activePose.bot_rot_y;
         targetScale = 3.4;
-      } else if (isInProjectsZone && !isProjectHover && certProgress < 0.01) {
-        // In projects section but not hovering: neutral centered pose
-        targetXPos  = PROJECTS_NEUTRAL_POSE.bot_x;
-        targetYPos  = -5.0 + PROJECTS_NEUTRAL_POSE.bot_y;
-        targetYRot  = PROJECTS_NEUTRAL_POSE.bot_rot_y;
-        targetScale = 3.4;
       } else {
-        // Normal behavior: combine scroll animations with joystick offsets
-        targetXPos  = baseXPos + certXOffset + poseControls.bot_x;
-        targetYPos  = baseYPos + certYOffset + poseControls.bot_y;
-        targetYRot  = baseYRot + certYRot + poseControls.bot_rot_y;
-        targetScale = baseScale;
+        // Static per-section pose (see SECTION_POSES) plus the cert-swipe
+        // choreography, which is tuned to land centered from this same base.
+        targetXPos  = sectionPose.x + certXOffset + poseControls.bot_x;
+        targetYPos  = -5.0 + sectionPose.y + certYOffset + poseControls.bot_y;
+        targetZPos  = sectionPose.z + poseControls.bot_z;
+        targetYRot  = sectionPose.rotY + certYRot + poseControls.bot_rot_y;
+        targetScale = activeSection === 'projects' || activeSection === 'skills' ? 3.4 : baseScale;
       }
 
       modelRef.current.position.x = THREE.MathUtils.lerp(modelRef.current.position.x, targetXPos,  medFactor);
       modelRef.current.position.y = THREE.MathUtils.lerp(modelRef.current.position.y, targetYPos,  medFactor);
-      const targetZPos = isProjectHover && activePose
-        ? activePose.bot_z
-        : isInProjectsZone && certProgress < 0.01
-          ? PROJECTS_NEUTRAL_POSE.bot_z
-          : poseControls.bot_z;
       modelRef.current.position.z = THREE.MathUtils.lerp(modelRef.current.position.z, targetZPos,  medFactor);
       modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, targetYRot,  medFactor);
       modelRef.current.scale.setScalar(THREE.MathUtils.lerp(modelRef.current.scale.x, targetScale, medFactor));

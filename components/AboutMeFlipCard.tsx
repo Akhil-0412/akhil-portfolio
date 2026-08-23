@@ -9,7 +9,7 @@ export default function AboutMeFlipCard() {
 
   return (
     <div 
-      className="relative w-full max-w-lg h-[650px] sm:h-[550px] [perspective:1000px] z-20 cursor-pointer"
+      className="relative w-full max-w-lg h-[650px] sm:h-[550px] max-h-full [perspective:1000px] z-20 cursor-pointer"
       onClick={() => {
         setIsFlipped(!isFlipped);
         if (!hasFlippedOnce) setHasFlippedOnce(true);
